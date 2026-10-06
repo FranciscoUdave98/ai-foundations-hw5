@@ -1,0 +1,38 @@
+# Secrets: never commit API keys
+.env
+.env.*
+!.env.example
+
+# Virtual environment (rebuild with: python -m venv .venv && pip install -r requirements.txt)
+.venv/
+venv/
+
+# Python caches
+__pycache__/
+*.pyc
+.ruff_cache/
+
+# Node / React + Vite board
+frontend/node_modules/
+frontend/dist/
+*.tsbuildinfo
+.vite/
+npm-debug.log*
+
+# Data: both databases ARE committed so graders can run the app.
+# Only the original download zip and SQLite temp files stay local.
+data.zip
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Local setup smoke test (not part of the homework)
+joke.py
+today_joke.txt
+
+# OS / editor clutter
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.tmp

@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Campus Customs · Desk Tickets</title>
+<style>
+  :root {
+    --navy: #0b2a5b;
+    --blue: #1d4ed8;
+    --blue-600: #2563eb;
+    --blue-100: #dbeafe;
+    --blue-50: #eff6ff;
+    --ink: #0f172a;
+    --muted: #475569;
+    --line: #cbd5e1;
+    --card: #ffffff;
+    --bg: #f4f7fc;
+    --amber: #b45309;
+    --amber-bg: #fef3c7;
+    --red: #b91c1c;
+    --red-bg: #fee2e2;
+    --green: #047857;
+    --green-bg: #d1fae5;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    line-height: 1.5;
+  }
+  header {
+    background: linear-gradient(135deg, var(--navy), var(--blue));
+    color: #fff;
+    padding: 22px 32px 0;
+  }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .brand h1 { font-size: 22px; margin: 0; font-weight: 650; letter-spacing: .2px; }
+  .brand p { margin: 2px 0 0; opacity: .85; font-size: 14px; }
+  .today {
+    margin-left: auto;
+    background: rgba(255,255,255,.14);
+    border: 1px solid rgba(255,255,255,.3);
+    border-radius: 10px;
+    padding: 8px 14px;
+    font-size: 13px;
+    text-align: right;
+  }
+  .today b { display: block; font-size: 18px; letter-spacing: .3px; }
+  nav { display: flex; gap: 4px; margin-top: 20px; flex-wrap: wrap; }
+  nav button {
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    color: #dbeafe;
+    background: transparent;
+    border: 0;
+    border-radius: 10px 10px 0 0;
+    padding: 10px 18px;
+    cursor: pointer;
+  }
+  nav button:hover { background: rgba(255,255,255,.12); color: #fff; }
+  nav button[aria-selected="true"] { background: var(--bg); color: var(--navy); }
+  nav .sep { width: 1px; background: rgba(255,255,255,.3); margin: 8px 6px; }
+  main { max-width: 1180px; margin: 0 auto; padding: 26px 32px 60px; }
+  section[role="tabpanel"] { display: none; }
+  section[role="tabpanel"].active { display: block; }
+
+  .ticket-head {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-left: 6px solid var(--blue);
+    border-radius: 12px;
+    padding: 18px 22px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 6px 20px;
+  }
+  .ticket-head h2 { margin: 0; font-size: 20px; color: var(--navy); }
+  .ticket-head .meta { color: var(--muted); font-size: 14px; }
+  .ticket-head blockquote {
+    grid-column: 1 / -1;
+    margin: 8px 0 0;
+    padding: 10px 14px;
+    background: var(--blue-50);
+    border-radius: 8px;
+    font-style: italic;
+  }
+  .pill {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 650;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: var(--blue-100);
+    color: var(--navy);
+    white-space: nowrap;
+  }
+  .pill.resolved { background: var(--green-bg); color: var(--green); }
+  .pill.open { background: var(--amber-bg); color: var(--amber); }
+
+  .facts { margin: 16px 0 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; }
+  .fact {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px 14px;
+  }
+  .fact .k { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+  .fact .v { font-size: 16px; font-weight: 650; }
+  .fact .v.bad { color: var(--red); }
+  .fact .v.warn { color: var(--amber); }
+  .fact .v.ok { color: var(--green); }
+  .fact .s { font-size: 12px; color: var(--muted); }
+  .source { margin-top: 6px; font-size: 12px; color: var(--muted); }
+
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 22px; }
+  @media (max-width: 900px) { .split { grid-template-columns: 1fr; } }
+  .panel {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .panel > h3 {
+    margin: 0;
+    padding: 12px 18px;
+    font-size: 15px;
+    letter-spacing: .6px;
+    text-transform: uppercase;
+    color: #fff;
+    background: var(--blue);
+  }
+  .panel.actual > h3 { background: #64748b; }
+  .panel .body { padding: 6px 18px 18px; }
+  .panel h4 { margin: 16px 0 6px; font-size: 14px; color: var(--navy); }
+  .panel ol, .panel ul { margin: 0; padding-left: 20px; }
+  .panel li { margin: 4px 0; }
+  .agent { font-weight: 650; color: var(--blue); }
+  .tool {
+    display: inline-block;
+    font-family: Consolas, "Cascadia Mono", monospace;
+    font-size: 12.5px;
+    background: var(--blue-50);
+    border: 1px solid var(--blue-100);
+    color: var(--navy);
+    border-radius: 6px;
+    padding: 1px 7px;
+    margin: 2px 2px 2px 0;
+  }
+  .said { color: var(--muted); font-size: 13px; }
+  .note {
+    margin-top: 14px;
+    font-size: 13px;
+    background: var(--blue-50);
+    border-left: 3px solid var(--blue-600);
+    padding: 8px 12px;
+    border-radius: 0 8px 8px 0;
+  }
+  .outcome {
+    margin-top: 4px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: var(--amber-bg);
+    color: #78350f;
+    font-weight: 600;
+  }
+  .skip { color: var(--muted); }
+
+  .slot {
+    min-height: 74px;
+    border: 2px dashed var(--line);
+    border-radius: 10px;
+    background: repeating-linear-gradient(0deg, transparent, transparent 23px, #eef2f7 24px);
+  }
+  .slot.tall { min-height: 120px; }
+
+  .empty {
+    background: var(--card);
+    border: 2px dashed var(--line);
+    border-radius: 12px;
+    min-height: 360px;
+    padding: 20px 24px;
+  }
+  .empty h2 { margin: 0; color: var(--navy); font-size: 20px; }
+  footer { text-align: center; color: var(--muted); font-size: 12px; padding: 0 0 30px; }
+<!--EXTRA-STYLE-START-->
+  .cx { display: inline-block; font-size: 12.5px; font-weight: 600; padding: 3px 10px; border-radius: 999px; margin: 2px 6px 2px 0; line-height: 1.3; }
+  .cx.paid { background: var(--red-bg); color: var(--red); }
+  .cx.cov { background: var(--blue-100); color: var(--navy); }
+  .cx.wait { background: var(--amber-bg); color: var(--amber); }
+  table.ledger.per td { vertical-align: middle; }
+
+  .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; counter-reset: s; }
+  .steps li { counter-increment: s; display: grid; grid-template-columns: 22px 30px 1fr; gap: 8px; align-items: start; font-size: 15px; line-height: 1.45; }
+  .steps li::before { content: counter(s); display: grid; place-items: center; width: 22px; height: 22px; margin-top: 3px; border-radius: 50%; background: var(--navy); color: #fff; font-size: 12px; font-weight: 700; }
+  .steps .mini .ic { width: 28px; height: 28px; }
+  .times { color: var(--navy); font-size: 12px; }
+  .outcome-box { display: grid; gap: 6px; padding: 10px 12px; border-radius: 8px; font-weight: 600; }
+  .outcome-box.warn { background: var(--amber-bg); color: #78350f; }
+  .outcome-box.good { background: var(--green-bg); color: var(--green); }
+  .outcome-box.bad { background: var(--red-bg); color: var(--red); }
+  .outcome-box .chip { justify-self: start; background: #fff; }
+  .score { display: inline-block; font-weight: 700; padding: 6px 12px; border-radius: 8px; background: var(--amber-bg); color: var(--amber); }
+  .score.all { background: var(--green-bg); color: var(--green); }
+  .score.all::before { content: '✓ '; }
+  details.more { margin-top: 10px; font-size: 13.5px; }
+  details.more summary { cursor: pointer; color: var(--blue); font-weight: 600; }
+  details.more h5 { margin: 10px 0 4px; color: var(--navy); }
+  details.more li { margin: 4px 0; }
+  .appr { align-items: center; }
+  .act-outcome { display: grid; gap: 6px; padding: 12px 14px; border-radius: 10px; background: var(--blue-50); border-left: 4px solid var(--blue); margin-top: 12px; }
+  .act-outcome .call { font-family: Georgia, serif; font-size: 15px; line-height: 1.45; }
+  .chip { display: inline-block; font-size: 12px; font-weight: 700; padding: 2px 10px; border-radius: 999px; }
+  .chip.good { background: var(--green-bg); color: var(--green); }
+  .chip.warn { background: var(--amber-bg); color: var(--amber); }
+  .chip.bad { background: var(--red-bg); color: var(--red); }
+  .chip.resolved { background: var(--green-bg); color: var(--green); }
+  .crew { display: grid; gap: 8px; }
+  .mate { display: grid; grid-template-columns: 34px 1fr; gap: 10px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); border-left: 4px solid var(--accent); }
+  .mate .ic { width: 34px; height: 34px; }
+  .mate b { font-family: Georgia, serif; color: var(--navy); }
+  .mate small { color: var(--muted); }
+  .mate .said { margin: 4px 0 0; font-size: 12.5px; color: var(--muted); font-style: italic; }
+  .flow { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; counter-reset: step; }
+  .flow li { counter-increment: step; display: grid; grid-template-columns: 22px 1fr; gap: 8px; font-size: 13px; }
+  .flow li::before { content: counter(step); display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--navy); color: #fff; font-size: 11px; font-weight: 700; }
+  .flow .who { font-weight: 700; color: var(--navy); }
+  .flow .req { color: var(--muted); }
+  .checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 13.5px; }
+  .checks .ok::before { content: '✓'; color: var(--green); font-weight: 800; margin-right: 8px; }
+  .checks .no::before { content: '✗'; color: var(--red); font-weight: 800; margin-right: 8px; }
+  .appr { display: flex; justify-content: space-between; gap: 10px; padding: 8px 10px; border-radius: 8px; background: var(--blue-50); font-size: 13px; margin-bottom: 6px; }
+  .appr b { font-family: Georgia, serif; }
+  .st { font-size: 11px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; white-space: nowrap; align-self: center; }
+  .st.approved { background: var(--green-bg); color: var(--green); }
+  .st.pending { background: var(--amber-bg); color: var(--amber); }
+  .st.covered { background: var(--blue-100); color: var(--navy); }
+  .cash-wrap { display: grid; gap: 18px; }
+  .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  @media (max-width: 900px) { .tiles { grid-template-columns: 1fr 1fr; } }
+  .tile { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+  .tile .k { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  .tile .v { font-size: 26px; font-weight: 700; color: var(--navy); font-family: Georgia, serif; }
+  .tile .v.out { color: var(--red); }
+  .tile .s { font-size: 12.5px; color: var(--muted); }
+  .tile.check { border-color: var(--green); background: var(--green-bg); }
+  .tile.check .v { color: var(--green); }
+  table.ledger { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; font-size: 14px; }
+  .ledger th { text-align: left; background: var(--navy); color: #fff; font-weight: 600; padding: 10px 12px; font-size: 12.5px; letter-spacing: .03em; }
+  .ledger td { padding: 10px 12px; border-top: 1px solid var(--line); vertical-align: top; }
+  .ledger td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .ledger tr.start td, .ledger tr.end td { background: var(--blue-50); font-weight: 700; }
+  .ledger .minus { color: var(--red); }
+  .card-box { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; }
+  .card-box h3 { margin: 0 0 10px; color: var(--navy); font-size: 17px; }
+  .math { font-family: Consolas, monospace; font-size: 14px; line-height: 1.9; }
+  .why li { margin: 6px 0; font-size: 14px; }
+
+  .glance { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 16px; display: grid; gap: 6px; }
+  .glance .gl { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; font-size: 13.5px; }
+  .glance .gk { font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); min-width: 92px; }
+  .glance .gi { color: var(--muted); }
+  .glance .gi b { color: var(--ink); font-weight: 700; }
+  .glance .gi b.neg { color: var(--red); }
+  .glance .gi .ic { width: 18px; height: 18px; vertical-align: -4px; }
+  .dash { display: grid; gap: 16px; margin-top: 18px; }
+  .kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+  @media (max-width: 1000px) { .kpis { grid-template-columns: repeat(2, 1fr); } }
+  .kpi { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; box-shadow: 0 1px 2px rgba(0,35,80,.05); }
+  .kpi .k { font-size: 11.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+  .kpi .v { font-size: 20px; line-height: 1.2; font-weight: 800; color: var(--navy); margin-top: 2px; font-family: Georgia, serif; }
+  .kpi .s { font-size: 12px; color: var(--muted); }
+  .kpi.good { border-color: #a7e3bf; background: var(--green-bg); } .kpi.good .v { color: var(--green); }
+  .kpi.warn { border-color: #f5d48a; background: var(--amber-bg); } .kpi.warn .v { color: var(--amber); }
+  .kpi.bad .v { color: var(--red); }
+  .kpi .faces { display: flex; gap: 2px; margin-top: 4px; }
+  .kpi .faces .ic { width: 24px; height: 24px; }
+  .board { background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  .board-head, .brow { display: grid; grid-template-columns: 1fr 1fr; }
+  .board-head > div { padding: 12px 18px; font-size: 15px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+  .brow h4 { margin: 0 0 8px; font-size: 14px; color: var(--navy); display: flex; align-items: center; gap: 8px; }
+  .brow .fitb { margin-left: auto; }
+  .brow .real { border-left: 1px solid var(--line); }
+  .board-head .h-plan { background: var(--blue); color: #fff; }
+  .board-head .h-real { background: #64748b; color: #fff; }
+  .board-head .h-row, .board-head .h-fit { background: #eef2f8; color: var(--muted); }
+  .brow { border-top: 1px solid var(--line); }
+  .brow > div { padding: 14px 18px; font-size: 14px; line-height: 1.5; }
+  .brow .rl { font-weight: 800; color: var(--navy); background: var(--blue-50); }
+  .brow .plan { background: #fbfcff; }
+  .brow .fit { display: grid; align-content: center; justify-items: start; }
+  .badge { font-size: 12px; font-weight: 800; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
+  .badge.ok { background: var(--green-bg); color: var(--green); }
+  .badge.plus { background: var(--blue-100); color: var(--navy); }
+  .badge.no { background: var(--red-bg); color: var(--red); }
+  .pipe { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+  .pipe .node { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px 3px 4px; border-radius: 999px; background: #fff; border: 1.5px solid var(--line); font-size: 13px; font-weight: 700; color: var(--navy); }
+  .pipe .node .ic { width: 22px; height: 22px; }
+  .pipe .node.extra { border-style: dashed; border-color: var(--blue); }
+  .pipe .arr { color: var(--muted); font-weight: 700; }
+  .note-s { display: block; margin-top: 6px; font-size: 12.5px; color: var(--muted); }
+  .tchip { display: inline-block; font-family: Consolas, monospace; font-size: 12px; padding: 2px 8px; border-radius: 6px; margin: 2px 4px 2px 0; border: 1px solid var(--blue-100); background: var(--blue-50); color: var(--navy); }
+  .tchip.hit { background: var(--green-bg); border-color: #a7e3bf; color: var(--green); }
+  .tchip.hit::before { content: '✓ '; font-family: system-ui; font-weight: 800; }
+  .tchip.miss { background: var(--red-bg); border-color: #f3b4ad; color: var(--red); }
+  .tchip.extra { border-style: dashed; }
+  .tchip .n { font-family: system-ui; font-weight: 800; margin-left: 3px; }
+  .out-real { display: grid; gap: 4px; }
+  .facts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+  .fact-card { background: var(--card); border: 1px solid var(--line); border-top: 4px solid var(--accent); border-radius: 12px; padding: 12px 14px; display: grid; gap: 6px; align-content: start; }
+  .fact-card .top { display: flex; align-items: center; gap: 8px; }
+  .fact-card .top .ic { width: 30px; height: 30px; }
+  .fact-card .top b { color: var(--navy); font-family: Georgia, serif; }
+  .fact-card .top small { color: var(--muted); display: block; font-size: 11.5px; }
+  .fact-card ul { margin: 0; padding-left: 18px; font-size: 13.5px; line-height: 1.45; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 1000px) { .row2 { grid-template-columns: 1fr; } .board-head, .brow { grid-template-columns: 1fr; } }
+  .panel-lite { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
+  .panel-lite h3 { margin: 0 0 10px; font-size: 15px; color: var(--navy); }
+  .sec-title { margin: 6px 0 -4px; font-size: 13px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+<!--EXTRA-STYLE-END-->
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <svg width="44" height="44" viewBox="0 0 44 44" aria-hidden="true">
+      <rect width="44" height="44" rx="10" fill="#ffffff" fill-opacity=".15"/>
+      <path d="M10 15h24l-2 18a3 3 0 0 1-3 2.7H15a3 3 0 0 1-3-2.7z" fill="#fff"/>
+      <path d="M16 15v-2a6 6 0 0 1 12 0v2" fill="none" stroke="#fff" stroke-width="2.4"/>
+      <text x="22" y="30" text-anchor="middle" font-size="10" font-weight="700" fill="#1d4ed8" font-family="Segoe UI, Arial">CC</text>
+    </svg>
+    <div>
+      <h1>Campus Customs · Desk Tickets</h1>
+      <p>HW5 Problem 6: what I expect the agent team to do on each ticket, and what it actually did</p>
+    </div>
+    <div class="today">desk.date_today<b>2026-08-31</b>all dates counted from here</div>
+  </div>
+  <nav role="tablist" aria-label="Desk tabs">
+    <button role="tab" id="tab-101" aria-controls="t101" aria-selected="true">Ticket 101</button>
+    <button role="tab" id="tab-102" aria-controls="t102" aria-selected="false">Ticket 102</button>
+    <button role="tab" id="tab-103" aria-controls="t103" aria-selected="false">Ticket 103</button>
+    <span class="sep" aria-hidden="true"></span>
+    <button role="tab" id="tab-cash" aria-controls="cash" aria-selected="false">Cash</button>
+    <button role="tab" id="tab-refl" aria-controls="reflections" aria-selected="false">Reflections</button>
+  </nav>
+</header>
+
+<main>
+
+<!-- ========================= TICKET 101 ========================= -->
+<section role="tabpanel" id="t101" aria-labelledby="tab-101" class="active">
+  <div class="ticket-head">
+    <h2>#101 · Bulldog tee</h2>
+    <span class="pill resolved">resolved</span>
+    <div class="meta">customer_order · from <b>Tauhid Zaman</b> · created 2026-08-31 09:15 · 1 × CC-TEE-WHITE (Classic Bulldog Tee), size S · linked invoice 501</div>
+    <blockquote>“Needs a tee in size S.”</blockquote>
+  </div>
+
+
+<!--DASH-101-START--><div class="dash">
+<div class="board"><div class="board-head"><div class="h-plan">Expected</div><div class="h-real">Actual</div></div><div class="brow"><div class="plan"><h4>Agents</h4><div class="pipe"><span class="node "><svg class="ic" viewBox="0 0 120 120" aria-hidden="true"><g stroke="#00356b" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"><path d="M26 36 C12 26 3 42 9 56 C15 52 22 46 31 41 Z" fill="#00356b"/><path d="M94 36 C108 26 117 42 111 56 C105 52 98 46 89 41 Z" fill="#00356b"/><path d="M60 20 C84 20 100 30 102 50 C104 62 108 78 100 92 C94 102 78 108 60 108 C42 108 26 102 20 92 C12 78 16 62 18 50 C20 30 36 20 60 20 Z" fill="#fff"/><path d="M70 38 C80 34 91 40 91 50 C91 58 83 60 77 58 C71 56 66 48 70 38 Z" fill="#00356b" stroke="none"/><circle cx="43" cy="50" r="5.5" fill="#00356b" stroke="none"/><circle cx="79" cy="49" r="3.5" fill="#00356b" stroke="none"/><path d="M37 82 C39 99 81 99 83 82 C74 88 46 88 37 82 Z" fill="#fff"/><path d="M60 76 C55 85 38 85 30 75" fill="#fff" stroke-width="2.8"/><path d="M60 76 C65 85 82 85 90 75" fill="#fff" stroke-width="2.8"/><path d="M42 88 L45.5 74 L49.5 86 Z" fill="#fff" stroke-width="2.2"/><path d="M70.5 86 L74.5 74 L78 88 Z" fill="#fff" stroke-width="2.2"/><path d="M47 62 C47 55 73 55 73 62 C73 68 66 71 60 71 C54 71 47 68 47 62 Z" fill="#00356b"/></g></svg>Coach Dan</span><span class="arr">→</span><span class="node "><svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#fff" stroke="#00356b" stroke-width="3"/><g stroke="#00356b" stroke-width="2.4" stroke-linejoin="round"><rect x="16" y="36" width="15" height="13" fill="#e8eef6"/><rect x="33" y="36" width="15" height="13" fill="#e8eef6"/><rect x="24" y="23" width="16" height="13" fill="#fff"/><path d="M24 13 l5 -3 h6 l5 3 l-3 4 l-2 -1 v7 h-6 v-7 l-2 1 Z" fill="#00356b"/></g></svg>Stacks</span><span class="arr">→</span><span class="node "><svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#fff" stroke="#00356b" stroke-width="3"/><g stroke="#00356b" stroke-width="2.4" stroke-linejoin="round"><rect x="14" y="16" width="24" height="32" rx="3" fill="#e8eef6"/><path d="M19 24 h14 M19 30 h14 M19 36 h9" stroke-linecap="round"/><circle cx="41" cy="40" r="10" fill="#00356b"/><text x="41" y="45" text-anchor="middle" font-size="14" font-weight="700" fill="#fff" stroke="none" font-family="Georgia,serif">$</text></g></svg>Penny</span></div><span class="note-s">Boss calls Inventory (it&#x27;s about stock); Accounting checks whether the linked invoice is paid.</span></div><div class="real"><h4>Agents <span class="fitb"><span class="badge ok">✓ as planned</span> <span class="badge plus">+ Sunny</span></span></h4><div class="pipe"><span class="node "><svg class="ic" viewBox="0 0 120 120" aria-hidden="true"><g stroke="#00356b" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"><path d="M26 36 C12 26 3 42 9 56 C15 52 22 46 31 41 Z" fill="#00356b"/><path d="M94 36 C108 26 117 42 111 56 C105 52 98 46 89 41 Z" fill="#00356b"/><path d="M60 20 C84 20 100 30 102 50 C104 62 108 78 100 92 C94 102 78 108 60 108 C42 108 26 102 20 92 C12 78 16 62 18 50 C20 30 36 20 60 20 Z" fill="#fff"/><path d="M70 38 C80 34 91 40 91 50 C91 58 83 60 77 58 C71 56 66 48 70 38 Z" fill="#00356b" stroke="none"/><circle cx="43" cy="50" r="5.5" fill="#00356b" stroke="none"/><circle cx="79" cy="49" r="3.5" fill="#00356b" stroke="none"/><path d="M37 82 C39 99 81 99 83 82 C74 88 46 88 37 82 Z" fill="#fff"/><path d="M60 76 C55 85 38 85 30 75" fill="#fff" stroke-width="2.8"/><path d="M60 76 C65 85 82 85 90 75" fill="#fff" stroke-width="2.8"/><path d="M42 88 L45.5 74 L49.5 86 Z" fill="#fff" stroke-width="2.2"/><path d="M70.5 86 L74.5 74 L78 88 Z" fill="#fff" stroke-width="2.2"/><path d="M47 62 C47 55 73 55 73 62 C73 68 66 71 60 71 C54 71 47 68 47 62 Z" fill="#00356b"/></g></svg>Coach Dan</span><span class="arr">→</span><span class="node "><svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#fff" stroke="#00356b" stroke-width="3"/><g stroke="#00356b" stroke-width="2.4" stroke-linejoin="round"><rect x="16" y="36" width="15" height="13" fill="#e8eef6"/><rect x="33" y="36" width="15" height="13" fill="#e8eef6"/><rect x="24" y="23" width="16" height="13" fill="#fff"/><path d="M24 13 l5 -3 h6 l5 3 l-3 4 l-2 -1 v7 h-6 v-7 l-2 1 Z" fill="#00356b"/></g></svg>Stacks</span><span class="arr">→</span><span class="node "><svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#fff" stroke="#00356b" stroke-width="3"/><g stroke="#00356b" stroke-width="2.4" stroke-linejoin="round"><rect x="14" y="16" width="24" height="32" rx="3" fill="#e8eef6"/><path d="M19 24 h14 M19 30 h14 M19 36 h9" stroke-linecap="round"/><circle cx="41" cy="40" r="10" fill="#00356b"/><text x="41" y="45" text-anchor="middle" font-size="14" font-weight="700" fill="#fff" stroke="none" font-family="Georgia,serif">$</text></g></svg>Penny</span><span class="arr">→</span><span class="node extra"><svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#fff" stroke="#00356b" stroke-width="3"/><g stroke="#00356b" stroke-width="2.4" stroke-linejoin="round"><path d="M14 20 Q14 15 19 15 H45 Q50 15 50 20 V36 Q50 41 45 41 H28 L20 49 V41 H19 Q14 41 14 36 Z" fill="#e8eef6"/><circle cx="25" cy="26" r="2" fill="#00356b" stroke="none"/><circle cx="39" cy="26" r="2" fill="#00356b" stroke="none"/><path d="M24 32 Q32 38 40 32" fill="none" stroke-linecap="round"/></g></svg>Sunny</span></div></div></div><div class="brow"><div class="plan"><h4>Tools</h4><span class="tchip">get_ticket_details</span><span class="tchip">check_item_availability</span><span class="tchip">check_invoice_payment</span></div><div class="real"><h4>Tools <span class="fitb"><span class="badge ok">✓ all used</span> <span class="badge plus">+4 extra</span></span></h4><span class="tchip hit">get_ticket_details<span class=n>×3</span></span><span class="tchip hit">check_item_availability</span><span class="tchip hit">check_invoice_payment</span><span class="tchip extra">+ get_vendor_info<span class=n>×2</span></span><span class="tchip extra">+ get_pricing</span><span class="tchip extra">+ get_cash_balance</span><span class="tchip extra">+ check_cash_for_payment<span class=n>×2</span></span></div></div><div class="brow"><div class="plan"><h4>Date check</h4>Invoice 501 was due 2026-08-28, so it&#x27;s overdue on desk.date_today.</div><div class="real"><h4>Date check <span class="fitb"><span class="badge ok">✓ correct</span></span></h4>Invoice 501 was due 2026-08-28, so it's <b>3 days overdue</b> on desk.date_today (2026-08-31).<br>Restock lead time is 5 days from desk.date_today: no date until the invoice is paid.</div></div><div class="brow"><div class="plan"><h4>Outcome</h4><b>They realize they can&#x27;t complete the order.</b></div><div class="real"><h4>Outcome <span class="fitb"><span class="badge ok">✓ matches</span></span></h4><div class="out-real"><span class="chip warn" style="justify-self:start">On hold</span><span>The order cannot be filled now because size S is out of stock and Bulldog Print Co will not ship while invoice 501 is unpaid.</span></div></div></div><div class="brow"><div class="plan"><h4>Not needed</h4>Keys</div><div class="real"><h4>Not needed <span class="fitb"><span class="badge ok">✓ stayed out</span></span></h4>Stayed out: <b>Keys</b></div></div></div>
+<div class="sec-title">What each agent found</div>
+<div class="facts-grid"><div class="fact-card" style="--accent:#00356b"><div class="top"><svg class="ic" viewBox="0 0 120 120" aria-hidden="true"><g stroke="#00356b" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"><path d="M26 36 C12 26 3 42 9 56 C15 52 22 46 31 41 Z" fill="#00356b"/><path d="M94 36 C108 26 117 42 111 56 C105 52 98 46 89 41 Z" fill="#00356b"/><path d="M60 20 C84 20 100 30 102 50 C104 62 108 78 100 92 C94 102 78 108 60 108 C42 108 26 102 20 92 C12 78 16 62 18 50 C20 30 36 20 60 20 Z" fill="#fff"/><path d="M70 38 C80 34 91 40 91 50 C91 58 83 60 77 58 C71 56 66 48 70 38 Z" fill="#00356b" stroke="none"/><circle cx="43" cy="50" r="5.5" fill="#00356b" stroke="none"/><circle cx="79" cy="49" r="3.5" fill="#00356b" stroke="none"/><path d="M37 82 C39 99 81 99 83 82 C74 88 46 88 37 82 Z" fill="#fff"/><path d="M60 76 C55 85 38 85 30 75" fill="#fff" stroke-width="2.8"/><path d="M60 76 C65 85 82 85 90 75" fill="#fff" stroke-width="2.8"/><path d="M42 88 L45.5 74 L49.5 86 Z" fill="#fff" stroke-width="2.2"/><path d="M70.5 86 L74.5 74 L78 88 Z" fill="#fff" stroke-width="2.2"/><path d="M47 62 C47 55 73 55 73 62 C73 68 66 71 60 71 C54 71 47 68 47 62 Z" fill="#00356b"/></g></svg><div><b>Coach Dan</b><small>Boss</small></div></div><ul><li>Called Stacks, then Penny, then Sunny</li><li>Call: On hold</li></ul></div><div class="fact-card" style="--accent:#1f4f8a"><div class="top"><svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#fff" stroke="#00356b" stroke-width="3"/><g stroke="#00356b" stroke-width="2.4" stroke-linejoin="round"><rect x="16" y="36" width="15" height="13" fill="#e8eef6"/><rect x="33" y="36" width="15" height="13" fill="#e8eef6"/><rect x="24" y="23" width="16" height="13" fill="#fff"/><path d="M24 13 l5 -3 h6 l5 3 l-3 4 l-2 -1 v7 h-6 v-7 l-2 1 Z" fill="#00356b"/></g></svg><div><b>Stacks</b><small>Inventory</small></div></div><ul><li>Size S: 0 on hand, short 1</li><li>Bulldog Print Co: 5-day lead time, won&#x27;t ship until its invoice is paid</li></ul></div><div class="fact-card" style="--accent:#2b6cb0"><div class="top"><svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#fff" stroke="#00356b" stroke-width="3"/><g stroke="#00356b" stroke-width="2.4" stroke-linejoin="round"><rect x="14" y="16" width="24" height="32" rx="3" fill="#e8eef6"/><path d="M19 24 h14 M19 30 h14 M19 36 h9" stroke-linecap="round"/><circle cx="41" cy="40" r="10" fill="#00356b"/><text x="41" y="45" text-anchor="middle" font-size="14" font-weight="700" fill="#fff" stroke="none" font-family="Georgia,serif">$</text></g></svg><div><b>Penny</b><small>Accounting</small></div></div><ul><li>Invoice 501: $840.00 unpaid, 3 days overdue</li><li>$3,248.00 fits (leaves $152.00)</li><li>Bulldog Print Co: 5-day lead time, won&#x27;t ship until its invoice is paid</li></ul></div><div class="fact-card" style="--accent:#4a7fc1"><div class="top"><svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#fff" stroke="#00356b" stroke-width="3"/><g stroke="#00356b" stroke-width="2.4" stroke-linejoin="round"><path d="M14 20 Q14 15 19 15 H45 Q50 15 50 20 V36 Q50 41 45 41 H28 L20 49 V41 H19 Q14 41 14 36 Z" fill="#e8eef6"/><circle cx="25" cy="26" r="2" fill="#00356b" stroke="none"/><circle cx="39" cy="26" r="2" fill="#00356b" stroke="none"/><path d="M24 32 Q32 38 40 32" fill="none" stroke-linecap="round"/></g></svg><div><b>Sunny</b><small>Customer Service</small></div></div><ul><li>Drafted a reply to Tauhid Zaman</li></ul></div></div>
+<div class="row2">
+  <div class="panel-lite"><h3>Signatures</h3><div class="appr"><span>$840.00 invoice payment → Bulldog Print Co</span><span class="st covered">paid via another ticket</span></div></div>
+  <div class="panel-lite"><h3>Message to Tauhid Zaman</h3>
+    <p class="said" style="white-space:pre-line;margin:0 0 8px">Hi Tauhid, we’re currently out of the Classic Bulldog Tee in size S. We’re working on arranging a restock, but it isn’t confirmed yet, so I can’t provide a delivery date. We’ll follow up when we have an update. No choice is needed right now; if you’d be open to another size, please let us know. — Campus Customs</p>
+    <details class="more"><summary>See every check (7/7)</summary><ul class="checks"><li class="ok">Boss called Inventory (product availability)</li><li class="ok">Accounting checked whether invoice 501 was paid</li><li class="ok">Used get_ticket_details</li><li class="ok">Used check_item_availability (&quot;get inventory&quot;)</li><li class="ok">Used check_invoice_payment (&quot;get invoice details&quot;)</li><li class="ok">Realized the order can&#x27;t be completed</li><li class="ok">Facilities not needed</li></ul></details>
+    <details class="more"><summary>Show the full conversation</summary><h5>What they asked each other</h5><ol><li><b>Coach Dan → Stacks:</b> Ticket 101, date_today 2026-08-31. Customer order requests 1 of CC-TEE-WHITE, size S (Classic Bulldog Tee). Linked invoice 501 for Bulldog Print Co is open, $840, due 2026-08-28, description rush reprint CC-TEE-WHITE S. Check exact stock availability for this order. If short, report restock/vendor shipping options and whether invoice status blocks shipment, using your tools. Return exact facts an…</li><li><b>Coach Dan → Penny:</b> Ticket 101, date_today 2026-08-31. Customer requests 1 CC-TEE-WHITE size S; inventory confirms 0 on hand (shortfall 1). Restock from Bulldog Print Co is $8.00 for 1 unit, 5-day lead; vendor will not ship while invoice 501 is open. Invoice 501 is open/unpaid, $840.00, due 2026-08-28 (3 days overdue), for rush reprint CC-TEE-WHITE S. Please check available cash for the combined $840 invoice payment…</li><li><b>Coach Dan → Sunny:</b> Ticket 101: Tauhid Zaman requests 1 Classic Bulldog Tee, CC-TEE-WHITE size S. Date today 2026-08-31. Inventory confirms 0 size S in stock; other sizes are not substitutes unless customer agrees. A 1-unit restock costs $8.00 with a 5-day vendor lead time, but Bulldog Print Co will not ship while invoice 501 ($840.00, overdue/open) remains unpaid. Accounting confirms cash can cover invoice plus res…</li></ol><h5>What each one reported</h5><ul><li><b>Coach Dan:</b> The order cannot be filled now because size S is out of stock and Bulldog Print Co will not ship while invoice 501 is unpaid. Unblock by obtaining human approval and recording payment of invoice 501; then have Inventory reassess and prepare the restock order for human approval, and fulfill only after the size S stock is received.</li><li><b>Stacks:</b> Ticket 101 needs 1 CC-TEE-WHITE, size S. There are 0 size S units on hand in Aisle B, so the order cannot be filled from current size-S stock; shortfall is 1. Sizes M (5), L (3), and XL (2) are in stock in Aisle B, but these are alternatives only and do not fulfill the size-S request unless the customer accepts a different size. Restock option: Bulldog Print Co (apparel reprint), 1 unit at $8.00 unit cost ($8.00 total). The vendor&#x27;s lead time is 5 days and its listed earliest delivery if ordere…</li><li><b>Penny:</b> The checking account has $3,400.00. The combined $848.00 for invoice 501 plus the $8.00 restock cost is affordable; including the $2,400.00 rent obligation due 2026-09-02, the planned total is $3,248.00 and the balance would be $152.00. Invoice 501 is $840.00 outstanding, unpaid, and 3 days overdue as of 2026-08-31. I prepared an $840.00 payment request for human approval only; no payment was sent. Bulldog Print Co will not ship while the invoice is unpaid, so a PO for the restock cannot procee…</li><li><b>Sunny:</b> Tauhid needs one Classic Bulldog Tee in size S. The ticket confirms the item and requested size; the inventory and restock status below relies on the confirmed details provided in the request. No further customer choice is needed right now. Tauhid may volunteer that another size is acceptable, but do not treat another size as a substitute without their agreement.</li></ul></details>
+  </div>
+</div>
+<div class="sec-title">At a glance</div>
+<div class="glance"><div class="gl"><span class="gk">Result</span><span class="gi">Decision: <span class="chip warn">On hold</span></span><span class="gi">Plan match: <b>7/7</b></span><span class="gi">Agents: <b>4 of 5</b> <svg class="ic" viewBox="0 0 120 120" aria-hidden="true"><g stroke="#00356b" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"><path d="M26 36 C12 26 3 42 9 56 C15 52 22 46 31 41 Z" fill="#00356b"/><path d="M94 36 C108 26 117 42 111 56 C105 52 98 46 89 41 Z" fill="#00356b"/><path d="M60 20 C84 20 100 30 102 50 C104 62 108 78 100 92 C94 102 78 108 60 108 C42 108 26 102 20 92 C12 78 16 62 18 50 C20 30 36 20 60 20 Z" fill="#fff"/><path d="M70 38 C80 34 91 40 91 50 C91 58 83 60 77 58 C71 56 66 48 70 38 Z" fill="#00356b" stroke="none"/><circle cx="43" cy="50" r="5.5" fill="#00356b" stroke="none"/><circle cx="79" cy="49" r="3.5" fill="#00356b" stroke="none"/><path d="M37 82 C39 99 81 99 83 82 C74 88 46 88 37 82 Z" fill="#fff"/><path d="M60 76 C55 85 38 85 30 75" fill="#fff" stroke-width="2.8"/><path d="M60 76 C65 85 82 85 90 75" fill="#fff" stroke-width="2.8"/><path d="M42 88 L45.5 74 L49.5 86 Z" fill="#fff" stroke-width="2.2"/><path d="M70.5 86 L74.5 74 L78 88 Z" fill="#fff" stroke-width="2.2"/><path d="M47 62 C47 55 73 55 73 62 C73 68 66 71 60 71 C54 71 47 68 47 62 Z" fill="#00356b"/></g></svg><svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#fff" stroke="#00356b" stroke-width="3"/><g stroke="#00356b" stroke-width="2.4" stroke-linejoin="round"><rect x="16" y="36" width="15" height="13" fill="#e8eef6"/><rect x="33" y="36" width="15" height="13" fill="#e8eef6"/><rect x="24" y="23" width="16" height="13" fill="#fff"/><path d="M24 13 l5 -3 h6 l5 3 l-3 4 l-2 -1 v7 h-6 v-7 l-2 1 Z" fill="#00356b"/></g></svg><svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#fff" stroke="#00356b" stroke-width="3"/><g stroke="#00356b" stroke-width="2.4" stroke-linejoin="round"><rect x="14" y="16" width="24" height="32" rx="3" fill="#e8eef6"/><path d="M19 24 h14 M19 30 h14 M19 36 h9" stroke-linecap="round"/><circle cx="41" cy="40" r="10" fill="#00356b"/><text x="41" y="45" text-anchor="middle" font-size="14" font-weight="700" fill="#fff" stroke="none" font-family="Georgia,serif">$</text></g></svg><svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#fff" stroke="#00356b" stroke-width="3"/><g stroke="#00356b" stroke-width="2.4" stroke-linejoin="round"><path d="M14 20 Q14 15 19 15 H45 Q50 15 50 20 V36 Q50 41 45 41 H28 L20 49 V41 H19 Q14 41 14 36 Z" fill="#e8eef6"/><circle cx="25" cy="26" r="2" fill="#00356b" stroke="none"/><circle cx="39" cy="26" r="2" fill="#00356b" stroke="none"/><path d="M24 32 Q32 38 40 32" fill="none" stroke-linecap="round"/></g></svg></span><span class="gi">Tool calls: <b>11</b></span><span class="gi">Cash impact: <b class="">$0.00</b></span></div><div class="gl"><span class="gk">Before the run</span><span class="gi">Size S on hand: <b>0 (M 5 · L 3 · XL 2)</b></span><span class="gi">Invoice 501: <b>$840 unpaid, 3 days overdue</b></span><span class="gi">Vendor will ship: <b>No</b></span><span class="gi">Reprint lead time: <b>5 days, after the invoice is paid</b></span></div></div>
+</div><!--DASH-101-END-->
+</section>
+
+<!-- ========================= TICKET 102 ========================= -->
+<section role="tabpanel" id="t102" aria-labelledby="tab-102">
+  <div class="ticket-head">
+    <h2>#102 · Rent due</h2>
+    <span class="pill resolved">resolved</span>
+    <div class="meta">rent_notice · from <b>Elm City Properties</b> · created 2026-08-31 11:05 · linked lease 1 (Chapel Street shop)</div>
+    <blockquote>“Email: shop rent due in 2 days.”</blockquote>
+  </div>
+
+
+<!--DASH-102-START--><div class="dash">
+<div class="board"><div class="board-head"><div class="h-plan">Expected</div><div class="h-real">Actual</div></div><div class="brow"><div class="plan"><h4>Agents</h4><div class="pipe"><span class="node "><svg class="ic" viewBox="0 0 120 120" aria-hidden="true"><g stroke="#00356b" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"><path d="M26 36 C12 26 3 42 9 56 C15 52 22 46 31 41 Z" fill="#00356b"/><path d="M94 36 C108 26 117 42 111 56 C105 52 98 46 89 41 Z" fill="#00356b"/><path d="M60 20 C84 20 100 30 102 50 C104 62 108 78 100 92 C94 102 78 108 60 108 C42 108 26 102 20 92 C12 78 16 62 18 50 C20 30 36 20 60 20 Z" fill="#fff"/><path d="M70 38 C80 34 91 40 91 50 C91 58 83 60 77 58 C71 56 66 48 70 38 Z" fill="#00356b" stroke="none"/><circle cx="43" cy="50" r="5.5" fill="#00356b" stroke="none"/><circle cx="79" cy="49" r="3.5" fill="#00356b" stroke="none"/><path d="M37 82 C39 99 81 99 83 82 C74 88 46 88 37 82 Z" fill="#fff"/><path d="M60 76 C55 85 38 85 30 75" fill="#fff" stroke-width="2.8"/><path d="M60 76 C65 85 82 85 90 75" fill="#fff" stroke-width="2.8"/><path d="M42 88 L45.5 74 L49.5 86 Z" fill="#fff" stroke-width="2.2"/><path d="M70.5 86 L74.5 74 L78 88 Z" fill="#fff" stroke-width="2.2"/><path d="M47 62 C47 55 73 55 73 62 C73 68 66 71 60 71 C54 71 47 68 47 62 Z" fill="#00356b"/></g></svg>Coach Dan</span><span class="arr">→</span><span class="node "><svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#fff" stroke="#00356b" stroke-width="3"/><g stroke="#00356b" stroke-width="2.4" stroke-linejoin="round"><path d="M14 28 L32 15 L50 28" fill="none" stroke-linecap="round"/><rect x="18" y="27" width="28" height="21" fill="#e8eef6"/><rect x="28" y="35" width="8" height="13" fill="#00356b"/><circle cx="45" cy="44" r="5" fill="#fff"/></g></svg>Keys</span><span class="arr">→</span><span class="node "><svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#fff" stroke="#00356b" stroke-width="3"/><g stroke="#00356b" stroke-width="2.4" stroke-linejoin="round"><rect x="14" y="16" width="24" height="32" rx="3" fill="#e8eef6"/><path d="M19 24 h14 M19 30 h14 M19 36 h9" stroke-linecap="round"/><circle cx="41" cy="40" r="10" fill="#00356b"/><text x="41" y="45" text-anchor="middle" font-size="14" font-weight="700" fill="#fff" stroke="none" font-family="Georgia,serif">$</text></g></svg>Penny</span></div><span class="note-s">Boss calls Facilities first to confirm the lease, then Accounting to check the cash.</span></div><div class="real"><h4>Agents <span class="fitb"><span class="badge ok">✓ as planned</span></span></h4><div class="pipe"><span class="node "><svg class="ic" viewBox="0 0 120 120" aria-hidden="true"><g stroke="#00356b" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"><path d="M26 36 C12 26 3 42 9 56 C15 52 22 46 31 41 Z" fill="#00356b"/><path d="M94 36 C108 26 117 42 111 56 C105 52 98 46 89 41 Z" fill="#00356b"/><path d="M60 20 C84 20 100 30 102 50 C104 62 108 78 100 92 C94 102 78 108 60 108 C42 108 26 102 20 92 C12 78 16 62 18 50 C20 30 36 20 60 20 Z" fill="#fff"/><path d="M70 38 C80 34 91 40 91 50 C91 58 83 60 77 58 C71 56 66 48 70 38 Z" fill="#00356b" stroke="none"/><circle cx="43" cy="50" r="5.5" fill="#00356b" stroke="none"/><circle cx="79" cy="49" r="3.5" fill="#00356b" stroke="none"/><path d="M37 82 C39 99 81 99 83 82 C74 88 46 88 37 82 Z" fill="#fff"/><path d="M60 76 C55 85 38 85 30 75" fill="#fff" stroke-width="2.8"/><path d="M60 76 C65 85 82 85 90 75" fill="#fff" stroke-width="2.8"/><path d="M42 88 L45.5 74 L49.5 86 Z" fill="#fff" stroke-width="2.2"/><path d="M70.5 86 L74.5 74 L78 88 Z" fill="#fff" stroke-width="2.2"/><path d="M47 62 C47 55 73 55 73 62 C73 68 66 71 60 71 C54 71 47 68 47 62 Z" fill="#00356b"/></g></svg>Coach Dan</span><span class="arr">→</span><span class="node "><svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#fff" stroke="#00356b" stroke-width="3"/><g stroke="#00356b" stroke-width="2.4" stroke-linejoin="round"><path d="M14 28 L32 15 L50 28" fill="none" stroke-linecap="round"/><rect x="18" y="27" width="28" height="21" fill="#e8eef6"/><rect x="28" y="35" width="8" height="13" fill="#00356b"/><circle cx="45" cy="44" r="5" fill="#fff"/></g></svg>Keys</span><span class="arr">→</span><span class="node "><svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#fff" stroke="#00356b" stroke-width="3"/><g stroke="#00356b" stroke-width="2.4" stroke-linejoin="round"><rect x="14" y="16" width="24" height="32" rx="3" fill="#e8eef6"/><path d="M19 24 h14 M19 30 h14 M19 36 h9" stroke-linecap="round"/><circle cx="41" cy="40" r="10" fill="#00356b"/><text x="41" y="45" text-anchor="middle" font-size="14" font-weight="700" fill="#fff" stroke="none" font-family="Georgia,serif">$</text></g></svg>Penny</span></div></div></div><div class="brow"><div class="plan"><h4>Tools</h4><span class="tchip">get_lease_details</span><span class="tchip">get_cash_balance</span></div><div class="real"><h4>Tools <span class="fitb"><span class="badge ok">✓ all used</span> <span class="badge plus">+3 extra</span></span></h4><span class="tchip hit">get_lease_details</span><span class="tchip hit">get_cash_balance</span><span class="tchip extra">+ get_ticket_details</span><span class="tchip extra">+ check_cash_for_payment<span class=n>×2</span></span><span class="tchip extra">+ check_invoice_payment</span></div></div><div class="brow"><div class="plan"><h4>Date check</h4>Rent due 2026-09-02 is 2 days after desk.date_today, so it&#x27;s not overdue.</div><div class="real"><h4>Date check <span class="fitb"><span class="badge ok">✓ correct</span></span></h4>Invoice 501 was due 2026-08-28, so it's <b>3 days overdue</b> on desk.date_today (2026-08-31).<br>Rent is due 2026-09-02: <b>2 days after</b> desk.date_today (2026-08-31), so not overdue.</div></div><div class="brow"><div class="plan"><h4>Outcome</h4><b>Rent is only prepared; a human approves the payment.</b></div><div class="real"><h4>Outcome <span class="fitb"><span class="badge ok">✓ matches</span></span></h4><div class="out-real"><span class="chip warn" style="justify-self:start">Approved with conditions</span><span>Prepare the $2,400 rent payment to Elm City Properties from checking for lease 1, subject to human approval.</span></div></div></div><div class="brow"><div class="plan"><h4>Not needed</h4>Stacks, Sunny</div><div class="real"><h4>Not needed <span class="fitb"><span class="badge ok">✓ stayed out</span></span></h4>Stayed out: <b>Stacks</b>, <b>Sunny</b></div></div></div>
+<div class="sec-title">What each agent found</div>
+<div class="facts-grid"><div class="fact-card" style="--accent:#00356b"><div class="top"><svg class="ic" viewBox="0 0 120 120" aria-hidden="true"><g stroke="#00356b" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"><path d="M26 36 C12 26 3 42 9 56 C15 52 22 46 31 41 Z" fill="#00356b"/><path d="M94 36 C108 26 117 42 111 56 C105 52 98 46 89 41 Z" fill="#00356b"/><path d="M60 20 C84 20 100 30 102 50 C104 62 108 78 100 92 C94 102 78 108 60 108 C42 108 26 102 20 92 C12 78 16 62 18 50 C20 30 36 20 60 20 Z" fill="#fff"/><path d="M70 38 C80 34 91 40 91 50 C91 58 83 60 77 58 C71 56 66 48 70 38 Z" fill="#00356b" stroke="none"/><circle cx="43" cy="50" r="5.5" fill="#00356b" stroke="none"/><circle cx="79" cy="49" r="3.5" fill="#00356b" stroke="none"/><path d="M37 82 C39 99 81 99 83 82 C74 88 46 88 37 82 Z" fill="#fff"/><path d="M60 76 C55 85 38 85 30 75" fill="#fff" stroke-width="2.8"/><path d="M60 76 C65 85 82 85 90 75" fill="#fff" stroke-width="2.8"/><path d="M42 88 L45.5 74 L49.5 86 Z" fill="#fff" stroke-width="2.2"/><path d="M70.5 86 L74.5 74 L78 88 Z" fill="#fff" stroke-width="2.2"/><path d="M47 62 C47 55 73 55 73 62 C73 68 66 71 60 71 C54 71 47 68 47 62 Z" fill="#00356b"/></g></svg><div><b>Coach Dan</b><small>Boss</small></div></div><ul><li>Called Keys, then Penny</li><li>Call: Approved with conditions</li></ul></div><div class="fact-card" style="--accent:#3d5a80"><div class="top"><svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#fff" stroke="#00356b" stroke-width="3"/><g stroke="#00356b" stroke-width="2.4" stroke-linejoin="round"><path d="M14 28 L32 15 L50 28" fill="none" stroke-linecap="round"/><rect x="18" y="27" width="28" height="21" fill="#e8eef6"/><rect x="28" y="35" width="8" height="13" fill="#00356b"/><circle cx="45" cy="44" r="5" fill="#fff"/></g></svg><div><b>Keys</b><small>Facilities</small></div></div><ul><li>Rent $2,400.00 due 2026-09-02 (2 days away)</li></ul></div><div class="fact-card" style="--accent:#2b6cb0"><div class="top"><svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#fff" stroke="#00356b" stroke-width="3"/><g stroke="#00356b" stroke-width="2.4" stroke-linejoin="round"><rect x="14" y="16" width="24" height="32" rx="3" fill="#e8eef6"/><path d="M19 24 h14 M19 30 h14 M19 36 h9" stroke-linecap="round"/><circle cx="41" cy="40" r="10" fill="#00356b"/><text x="41" y="45" text-anchor="middle" font-size="14" font-weight="700" fill="#fff" stroke="none" font-family="Georgia,serif">$</text></g></svg><div><b>Penny</b><small>Accounting</small></div></div><ul><li>Invoice 501: $840.00 unpaid, 3 days overdue</li><li>$3,240.00 fits (leaves $160.00)</li><li>Checking $3,400.00; bills due $3,240.00 → leaves $160.00</li></ul></div></div>
+<div class="row2">
+  <div class="panel-lite"><h3>Signatures</h3><div class="appr"><span>$2,400.00 rent payment → Elm City Properties</span><span class="st pending">waiting for you</span></div></div>
+  <div class="panel-lite"><h3>Details</h3>
+    
+    <details class="more"><summary>See every check (5/5)</summary><ul class="checks"><li class="ok">Boss called Facilities first to confirm the lease</li><li class="ok">Then Accounting checked there is enough cash</li><li class="ok">Used get_lease_details</li><li class="ok">Used get_cash_balance (&quot;get cash account balance&quot;)</li><li class="ok">Inventory and Customer Service not needed</li></ul></details>
+    <details class="more"><summary>Show the full conversation</summary><h5>What they asked each other</h5><ol><li><b>Coach Dan → Keys:</b> Ticket 102 rent_notice. desk.date_today is 2026-08-31. Ticket links lease_id 1, rent due notice says due in 2 days; linked record shows Chapel Street shop, landlord Elm City Properties, monthly rent $2,400, next_due 2026-09-02, days_until_due 2. Please confirm lease/rent amount/due date against your database and report facts/source; note any discrepancy.</li><li><b>Coach Dan → Penny:</b> Ticket 102 rent_notice, date_today 2026-08-31. Facilities confirmed lease 1 for Chapel Street shop, landlord Elm City Properties, rent $2,400 due 2026-09-02 (2 days), not overdue; rent payments recorded []. Please check cash available for this $2,400 rent alongside other obligations as appropriate, and prepare a rent payment request for human approval if cash can cover it. Report exact balance/ch…</li></ol><h5>What each one reported</h5><ul><li><b>Coach Dan:</b> Prepare the $2,400 rent payment to Elm City Properties from checking for lease 1, subject to human approval. It is due 2026-09-02; accounting confirms the rent and other listed obligations are affordable, and no payment has been made.</li><li><b>Penny:</b> Checking has $3,400.00. The $2,400.00 rent payment by itself is affordable and would leave $1,000.00. The checking-account affordability check for all listed obligations—$840.00 overdue invoice 501 plus $2,400.00 rent, $3,240.00 total—also passes and leaves $160.00. Recommendation: address the overdue invoice first, then pay rent by its due date; the rent payment request below is prepared for human approval only. No payment has been made.</li><li><b>Keys:</b> Lease 1 confirms the rent notice: Chapel Street shop, landlord Elm City Properties, monthly rent $2,400, due 2026-09-02 (2 days after desk.date_today, 2026-08-31). The lease is not overdue. No discrepancy found.</li></ul></details>
+  </div>
+</div>
+<div class="sec-title">At a glance</div>
+<div class="glance"><div class="gl"><span class="gk">Result</span><span class="gi">Decision: <span class="chip warn">Approved with conditions</span></span><span class="gi">Plan match: <b>5/5</b></span><span class="gi">Agents: <b>3 of 5</b> <svg class="ic" viewBox="0 0 120 120" aria-hidden="true"><g stroke="#00356b" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"><path d="M26 36 C12 26 3 42 9 56 C15 52 22 46 31 41 Z" fill="#00356b"/><path d="M94 36 C108 26 117 42 111 56 C105 52 98 46 89 41 Z" fill="#00356b"/><path d="M60 20 C84 20 100 30 102 50 C104 62 108 78 100 92 C94 102 78 108 60 108 C42 108 26 102 20 92 C12 78 16 62 18 50 C20 30 36 20 60 20 Z" fill="#fff"/><path d="M70 38 C80 34 91 40 91 50 C91 58 83 60 77 58 C71 56 66 48 70 38 Z" fill="#00356b" stroke="none"/><circle cx="43" cy="50" r="5.5" fill="#00356b" stroke="none"/><circle cx="79" cy="49" r="3.5" fill="#00356b" stroke="none"/><path d="M37 82 C39 99 81 99 83 82 C74 88 46 88 37 82 Z" fill="#fff"/><path d="M60 76 C55 85 38 85 30 75" fill="#fff" stroke-width="2.8"/><path d="M60 76 C65 85 82 85 90 75" fill="#fff" stroke-width="2.8"/><path d="M42 88 L45.5 74 L49.5 86 Z" fill="#fff" stroke-width="2.2"/><path d="M70.5 86 L74.5 74 L78 88 Z" fill="#fff" stroke-width="2.2"/><path d="M47 62 C47 55 73 55 73 62 C73 68 66 71 60 71 C54 71 47 68 47 62 Z" fill="#00356b"/></g></svg><svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#fff" stroke="#00356b" stroke-width="3"/><g stroke="#00356b" stroke-width="2.4" stroke-linejoin="round"><path d="M14 28 L32 15 L50 28" fill="none" stroke-linecap="round"/><rect x="18" y="27" width="28" height="21" fill="#e8eef6"/><rect x="28" y="35" width="8" height="13" fill="#00356b"/><circle cx="45" cy="44" r="5" fill="#fff"/></g></svg><svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#fff" stroke="#00356b" stroke-width="3"/><g stroke="#00356b" stroke-width="2.4" stroke-linejoin="round"><rect x="14" y="16" width="24" height="32" rx="3" fill="#e8eef6"/><path d="M19 24 h14 M19 30 h14 M19 36 h9" stroke-linecap="round"/><circle cx="41" cy="40" r="10" fill="#00356b"/><text x="41" y="45" text-anchor="middle" font-size="14" font-weight="700" fill="#fff" stroke="none" font-family="Georgia,serif">$</text></g></svg></span><span class="gi">Tool calls: <b>6</b></span><span class="gi">Cash impact: <b class="">$0.00</b></span></div><div class="gl"><span class="gk">Before the run</span><span class="gi">Monthly rent: <b>$2,400</b></span><span class="gi">Next due: <b>2026-09-02 (in 2 days)</b></span><span class="gi">Checking: <b>$3,400</b></span><span class="gi">Left after all bills: <b>$160</b></span></div></div>
+</div><!--DASH-102-END-->
+</section>
+
+<!-- ========================= TICKET 103 ========================= -->
+<section role="tabpanel" id="t103" aria-labelledby="tab-103">
+  <div class="ticket-head">
+    <h2>#103 · Bulk hoodie discount</h2>
+    <span class="pill resolved">resolved</span>
+    <div class="meta">price_override · from <b>Yale AI Club</b> · created 2026-08-31 16:55 · 20 × CC-HOOD-NAVY (Basic Hoodie Big Yale), size M</div>
+    <blockquote>“Student org wants 20 hoodies, size M, asking for a bulk discount.”</blockquote>
+  </div>
+
+
+<!--DASH-103-START--><div class="dash">
+<div class="board"><div class="board-head"><div class="h-plan">Expected</div><div class="h-real">Actual</div></div><div class="brow"><div class="plan"><h4>Agents</h4><div class="pipe"><span class="node "><svg class="ic" viewBox="0 0 120 120" aria-hidden="true"><g stroke="#00356b" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"><path d="M26 36 C12 26 3 42 9 56 C15 52 22 46 31 41 Z" fill="#00356b"/><path d="M94 36 C108 26 117 42 111 56 C105 52 98 46 89 41 Z" fill="#00356b"/><path d="M60 20 C84 20 100 30 102 50 C104 62 108 78 100 92 C94 102 78 108 60 108 C42 108 26 102 20 92 C12 78 16 62 18 50 C20 30 36 20 60 20 Z" fill="#fff"/><path d="M70 38 C80 34 91 40 91 50 C91 58 83 60 77 58 C71 56 66 48 70 38 Z" fill="#00356b" stroke="none"/><circle cx="43" cy="50" r="5.5" fill="#00356b" stroke="none"/><circle cx="79" cy="49" r="3.5" fill="#00356b" stroke="none"/><path d="M37 82 C39 99 81 99 83 82 C74 88 46 88 37 82 Z" fill="#fff"/><path d="M60 76 C55 85 38 85 30 75" fill="#fff" stroke-width="2.8"/><path d="M60 76 C65 85 82 85 90 75" fill="#fff" stroke-width="2.8"/><path d="M42 88 L45.5 74 L49.5 86 Z" fill="#fff" stroke-width="2.2"/><path d="M70.5 86 L74.5 74 L78 88 Z" fill="#fff" stroke-width="2.2"/><path d="M47 62 C47 55 73 55 73 62 C73 68 66 71 60 71 C54 71 47 68 47 62 Z" fill="#00356b"/></g></svg>Coach Dan</span><span class="arr">→</span><span class="node "><svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#fff" stroke="#00356b" stroke-width="3"/><g stroke="#00356b" stroke-width="2.4" stroke-linejoin="round"><rect x="16" y="36" width="15" height="13" fill="#e8eef6"/><rect x="33" y="36" width="15" height="13" fill="#e8eef6"/><rect x="24" y="23" width="16" height="13" fill="#fff"/><path d="M24 13 l5 -3 h6 l5 3 l-3 4 l-2 -1 v7 h-6 v-7 l-2 1 Z" fill="#00356b"/></g></svg>Stacks</span><span class="arr">→</span><span class="node "><svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#fff" stroke="#00356b" stroke-width="3"/><g stroke="#00356b" stroke-width="2.4" stroke-linejoin="round"><rect x="14" y="16" width="24" height="32" rx="3" fill="#e8eef6"/><path d="M19 24 h14 M19 30 h14 M19 36 h9" stroke-linecap="round"/><circle cx="41" cy="40" r="10" fill="#00356b"/><text x="41" y="45" text-anchor="middle" font-size="14" font-weight="700" fill="#fff" stroke="none" font-family="Georgia,serif">$</text></g></svg>Penny</span><span class="arr">→</span><span class="node "><svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#fff" stroke="#00356b" stroke-width="3"/><g stroke="#00356b" stroke-width="2.4" stroke-linejoin="round"><path d="M14 20 Q14 15 19 15 H45 Q50 15 50 20 V36 Q50 41 45 41 H28 L20 49 V41 H19 Q14 41 14 36 Z" fill="#e8eef6"/><circle cx="25" cy="26" r="2" fill="#00356b" stroke="none"/><circle cx="39" cy="26" r="2" fill="#00356b" stroke="none"/><path d="M24 32 Q32 38 40 32" fill="none" stroke-linecap="round"/></g></svg>Sunny</span></div><span class="note-s">Inventory first (enough stock?), the vendor check (by Inventory), then Accounting and Customer Service.</span></div><div class="real"><h4>Agents <span class="fitb"><span class="badge ok">✓ as planned</span></span></h4><div class="pipe"><span class="node "><svg class="ic" viewBox="0 0 120 120" aria-hidden="true"><g stroke="#00356b" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"><path d="M26 36 C12 26 3 42 9 56 C15 52 22 46 31 41 Z" fill="#00356b"/><path d="M94 36 C108 26 117 42 111 56 C105 52 98 46 89 41 Z" fill="#00356b"/><path d="M60 20 C84 20 100 30 102 50 C104 62 108 78 100 92 C94 102 78 108 60 108 C42 108 26 102 20 92 C12 78 16 62 18 50 C20 30 36 20 60 20 Z" fill="#fff"/><path d="M70 38 C80 34 91 40 91 50 C91 58 83 60 77 58 C71 56 66 48 70 38 Z" fill="#00356b" stroke="none"/><circle cx="43" cy="50" r="5.5" fill="#00356b" stroke="none"/><circle cx="79" cy="49" r="3.5" fill="#00356b" stroke="none"/><path d="M37 82 C39 99 81 99 83 82 C74 88 46 88 37 82 Z" fill="#fff"/><path d="M60 76 C55 85 38 85 30 75" fill="#fff" stroke-width="2.8"/><path d="M60 76 C65 85 82 85 90 75" fill="#fff" stroke-width="2.8"/><path d="M42 88 L45.5 74 L49.5 86 Z" fill="#fff" stroke-width="2.2"/><path d="M70.5 86 L74.5 74 L78 88 Z" fill="#fff" stroke-width="2.2"/><path d="M47 62 C47 55 73 55 73 62 C73 68 66 71 60 71 C54 71 47 68 47 62 Z" fill="#00356b"/></g></svg>Coach Dan</span><span class="arr">→</span><span class="node "><svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#fff" stroke="#00356b" stroke-width="3"/><g stroke="#00356b" stroke-width="2.4" stroke-linejoin="round"><rect x="16" y="36" width="15" height="13" fill="#e8eef6"/><rect x="33" y="36" width="15" height="13" fill="#e8eef6"/><rect x="24" y="23" width="16" height="13" fill="#fff"/><path d="M24 13 l5 -3 h6 l5 3 l-3 4 l-2 -1 v7 h-6 v-7 l-2 1 Z" fill="#00356b"/></g></svg>Stacks</span><span class="arr">→</span><span class="node "><svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#fff" stroke="#00356b" stroke-width="3"/><g stroke="#00356b" stroke-width="2.4" stroke-linejoin="round"><rect x="14" y="16" width="24" height="32" rx="3" fill="#e8eef6"/><path d="M19 24 h14 M19 30 h14 M19 36 h9" stroke-linecap="round"/><circle cx="41" cy="40" r="10" fill="#00356b"/><text x="41" y="45" text-anchor="middle" font-size="14" font-weight="700" fill="#fff" stroke="none" font-family="Georgia,serif">$</text></g></svg>Penny</span><span class="arr">→</span><span class="node "><svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#fff" stroke="#00356b" stroke-width="3"/><g stroke="#00356b" stroke-width="2.4" stroke-linejoin="round"><path d="M14 20 Q14 15 19 15 H45 Q50 15 50 20 V36 Q50 41 45 41 H28 L20 49 V41 H19 Q14 41 14 36 Z" fill="#e8eef6"/><circle cx="25" cy="26" r="2" fill="#00356b" stroke="none"/><circle cx="39" cy="26" r="2" fill="#00356b" stroke="none"/><path d="M24 32 Q32 38 40 32" fill="none" stroke-linecap="round"/></g></svg>Sunny</span></div></div></div><div class="brow"><div class="plan"><h4>Tools</h4><span class="tchip">get_ticket_details</span><span class="tchip">check_item_availability</span><span class="tchip">get_vendor_info</span><span class="tchip">get_pricing</span></div><div class="real"><h4>Tools <span class="fitb"><span class="badge ok">✓ all used</span> <span class="badge plus">+2 extra</span></span></h4><span class="tchip hit">get_ticket_details<span class=n>×3</span></span><span class="tchip hit">check_item_availability</span><span class="tchip hit">get_vendor_info<span class=n>×3</span></span><span class="tchip hit">get_pricing<span class=n>×6</span></span><span class="tchip extra">+ check_cash_for_payment</span><span class="tchip extra">+ check_invoice_payment</span></div></div><div class="brow"><div class="plan"><h4>Date check</h4>Any restock date is desk.date_today + the vendor&#x27;s lead days, and only once it will ship.</div><div class="real"><h4>Date check <span class="fitb"><span class="badge ok">✓ correct</span></span></h4>Invoice 501 was due 2026-08-28, so it's <b>3 days overdue</b> on desk.date_today (2026-08-31).<br>Restock lead time is 5 days from desk.date_today: no date until the invoice is paid.</div></div><div class="brow"><div class="plan"><h4>Outcome</h4><b>The Boss doesn&#x27;t make up a random discount.</b></div><div class="real"><h4>Outcome <span class="fitb"><span class="badge ok">✓ matches</span></span></h4><div class="out-real"><span class="chip warn" style="justify-self:start">Needs a human call</span><span>Escalate the discount choice to a human; Accounting priced 5%, 10%, and 15% options, but no discount is selected.</span></div></div></div><div class="brow"><div class="plan"><h4>Not needed</h4>Keys</div><div class="real"><h4>Not needed <span class="fitb"><span class="badge ok">✓ stayed out</span></span></h4>Stayed out: <b>Keys</b></div></div></div>
+<div class="sec-title">What each agent found</div>
+<div class="facts-grid"><div class="fact-card" style="--accent:#00356b"><div class="top"><svg class="ic" viewBox="0 0 120 120" aria-hidden="true"><g stroke="#00356b" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"><path d="M26 36 C12 26 3 42 9 56 C15 52 22 46 31 41 Z" fill="#00356b"/><path d="M94 36 C108 26 117 42 111 56 C105 52 98 46 89 41 Z" fill="#00356b"/><path d="M60 20 C84 20 100 30 102 50 C104 62 108 78 100 92 C94 102 78 108 60 108 C42 108 26 102 20 92 C12 78 16 62 18 50 C20 30 36 20 60 20 Z" fill="#fff"/><path d="M70 38 C80 34 91 40 91 50 C91 58 83 60 77 58 C71 56 66 48 70 38 Z" fill="#00356b" stroke="none"/><circle cx="43" cy="50" r="5.5" fill="#00356b" stroke="none"/><circle cx="79" cy="49" r="3.5" fill="#00356b" stroke="none"/><path d="M37 82 C39 99 81 99 83 82 C74 88 46 88 37 82 Z" fill="#fff"/><path d="M60 76 C55 85 38 85 30 75" fill="#fff" stroke-width="2.8"/><path d="M60 76 C65 85 82 85 90 75" fill="#fff" stroke-width="2.8"/><path d="M42 88 L45.5 74 L49.5 86 Z" fill="#fff" stroke-width="2.2"/><path d="M70.5 86 L74.5 74 L78 88 Z" fill="#fff" stroke-width="2.2"/><path d="M47 62 C47 55 73 55 73 62 C73 68 66 71 60 71 C54 71 47 68 47 62 Z" fill="#00356b"/></g></svg><div><b>Coach Dan</b><small>Boss</small></div></div><ul><li>Called Stacks, then Penny, then Sunny</li><li>Call: Needs a human call</li></ul></div><div class="fact-card" style="--accent:#1f4f8a"><div class="top"><svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#fff" stroke="#00356b" stroke-width="3"/><g stroke="#00356b" stroke-width="2.4" stroke-linejoin="round"><rect x="16" y="36" width="15" height="13" fill="#e8eef6"/><rect x="33" y="36" width="15" height="13" fill="#e8eef6"/><rect x="24" y="23" width="16" height="13" fill="#fff"/><path d="M24 13 l5 -3 h6 l5 3 l-3 4 l-2 -1 v7 h-6 v-7 l-2 1 Z" fill="#00356b"/></g></svg><div><b>Stacks</b><small>Inventory</small></div></div><ul><li>Size M: 8 on hand, short 12</li><li>Bulldog Print Co: 5-day lead time, won&#x27;t ship until its invoice is paid</li></ul></div><div class="fact-card" style="--accent:#2b6cb0"><div class="top"><svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#fff" stroke="#00356b" stroke-width="3"/><g stroke="#00356b" stroke-width="2.4" stroke-linejoin="round"><rect x="14" y="16" width="24" height="32" rx="3" fill="#e8eef6"/><path d="M19 24 h14 M19 30 h14 M19 36 h9" stroke-linecap="round"/><circle cx="41" cy="40" r="10" fill="#00356b"/><text x="41" y="45" text-anchor="middle" font-size="14" font-weight="700" fill="#fff" stroke="none" font-family="Georgia,serif">$</text></g></svg><div><b>Penny</b><small>Accounting</small></div></div><ul><li>Invoice 501: $840.00 unpaid, 3 days overdue</li><li>$1,104.00 fits (leaves $2,296.00)</li><li>Bulldog Print Co: 5-day lead time, won&#x27;t ship until its invoice is paid</li><li>Priced 5%/10%/15% options; no pick</li></ul></div><div class="fact-card" style="--accent:#4a7fc1"><div class="top"><svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#fff" stroke="#00356b" stroke-width="3"/><g stroke="#00356b" stroke-width="2.4" stroke-linejoin="round"><path d="M14 20 Q14 15 19 15 H45 Q50 15 50 20 V36 Q50 41 45 41 H28 L20 49 V41 H19 Q14 41 14 36 Z" fill="#e8eef6"/><circle cx="25" cy="26" r="2" fill="#00356b" stroke="none"/><circle cx="39" cy="26" r="2" fill="#00356b" stroke="none"/><path d="M24 32 Q32 38 40 32" fill="none" stroke-linecap="round"/></g></svg><div><b>Sunny</b><small>Customer Service</small></div></div><ul><li>Drafted a reply to Yale AI Club</li></ul></div></div>
+<div class="row2">
+  <div class="panel-lite"><h3>Signatures</h3><div class="appr"><span>$840.00 invoice payment → Bulldog Print Co</span><span class="st approved">signed by Francisco Udave</span></div><div class="appr"><span>$264.00 purchase order → Bulldog Print Co</span><span class="st approved">signed by Francisco Udave</span></div></div>
+  <div class="panel-lite"><h3>Message to Yale AI Club</h3>
+    <p class="said" style="white-space:pre-line;margin:0 0 8px">Hi Yale AI Club, We have 8 navy hoodies in size M available, so 12 of your requested 20 are not currently in stock. The pricing options for all 20 are $1,160 at standard price, $1,102 with 5% off, $1,044 with 10% off, or $986 with 15% off; no discount has been selected. The discount and restock are pending review, so we can’t yet confirm fulfillment or a delivery date. We’ll follow up when we have an update. Best, Campus Customs</p>
+    <details class="more"><summary>See every check (6/6)</summary><ul class="checks"><li class="ok">Boss called Inventory first (enough stock?)</li><li class="ok">Vendor check to see if we can get more (get_vendor_info)</li><li class="ok">Boss called Accounting</li><li class="ok">Boss called Customer Service</li><li class="ok">No made-up discount: options priced by Accounting, choice left to a human</li><li class="ok">Facilities not needed</li></ul></details>
+    <details class="more"><summary>Show the full conversation</summary><h5>What they asked each other</h5><ol><li><b>Coach Dan → Stacks:</b> Ticket 103, price_override for Yale AI Club: date_today 2026-08-31. They request 20 CC-HOOD-NAVY, size M (Basic Hoodie Big Yale), bulk discount. Check exact stock availability; if short, provide restock option, vendor lead time, ship eligibility including any open unpaid invoice. Return sourced facts and any recommendations.</li><li><b>Coach Dan → Penny:</b> Ticket 103, date_today 2026-08-31. Yale AI Club requests 20 CC-HOOD-NAVY size M. Inventory reports 8 available, shortfall 12; standard quote for 20 is $58/unit ($1,160 total), underlying total cost $440, gross margin $720; 12-unit restock is $22/unit ($264), blocked because Bulldog Print Co invoice 501 for $840 is overdue/unpaid. Please price defensible discount options for this 20-unit request (…</li><li><b>Coach Dan → Sunny:</b> Ticket 103, date_today 2026-08-31, requester Yale AI Club. Please draft a concise reply based only on these confirmed facts and the decision requiring human review: request is 20 CC-HOOD-NAVY hoodies size M; 8 are currently available, leaving 12 short. Accounting priced options: standard $58/unit ($1,160 total), 5% off $55.10/unit ($1,102 total), 10% off $52.20/unit ($1,044 total), or 15% off $49…</li></ol><h5>What each one reported</h5><ul><li><b>Coach Dan:</b> Escalate the discount choice to a human; Accounting priced 5%, 10%, and 15% options, but no discount is selected. The order is short 12 size-M hoodies, so restocking also depends on human approval and payment of overdue invoice 501 before the vendor will ship; do not promise fulfillment or a delivery date.</li><li><b>Stacks:</b> Ticket 103 requests 20 CC-HOOD-NAVY Basic Hoodie Big Yale, size M. There are 8 size M units in Aisle A, so the request is short by 12. Other sizes on hand are S: 4, L: 14, and XL: 6; these are not counted toward the size M request and should only be considered if the customer accepts alternatives. A restock draft for 12 units is prepared at $22 per unit ($264 total). The apparel vendor is Bulldog Print Co, with a 5-day lead time and a listed earliest delivery of 2026-09-05 if ordered today, but…</li><li><b>Penny:</b> For CC-HOOD-NAVY, the standard 20-unit quote is $58.00/unit ($1,160 total), with $440 total cost and $720 gross margin (62.1%). Discount options—not a selection or recommendation—are: 5% off, $55.10/unit, $1,102 total, $440 cost, $662 gross margin (60.1%); 10% off, $52.20/unit, $1,044 total, $440 cost, $604 gross margin (57.9%); and 15% off, $49.30/unit, $986 total, $440 cost, $546 gross margin (55.4%). Each quoted option remains above cost. The pricing tool reports a maximum discount before lo…</li><li><b>Sunny:</b> Yale AI Club requested 20 CC-HOOD-NAVY hoodies in size M. The draft states the confirmed stock shortfall, presents all quoted prices as unselected options, and explains that discount/restock review is pending without promising fulfillment or delivery.</li></ul></details>
+  </div>
+</div>
+<div class="sec-title">At a glance</div>
+<div class="glance"><div class="gl"><span class="gk">Result</span><span class="gi">Decision: <span class="chip warn">Needs a human call</span></span><span class="gi">Plan match: <b>6/6</b></span><span class="gi">Agents: <b>4 of 5</b> <svg class="ic" viewBox="0 0 120 120" aria-hidden="true"><g stroke="#00356b" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"><path d="M26 36 C12 26 3 42 9 56 C15 52 22 46 31 41 Z" fill="#00356b"/><path d="M94 36 C108 26 117 42 111 56 C105 52 98 46 89 41 Z" fill="#00356b"/><path d="M60 20 C84 20 100 30 102 50 C104 62 108 78 100 92 C94 102 78 108 60 108 C42 108 26 102 20 92 C12 78 16 62 18 50 C20 30 36 20 60 20 Z" fill="#fff"/><path d="M70 38 C80 34 91 40 91 50 C91 58 83 60 77 58 C71 56 66 48 70 38 Z" fill="#00356b" stroke="none"/><circle cx="43" cy="50" r="5.5" fill="#00356b" stroke="none"/><circle cx="79" cy="49" r="3.5" fill="#00356b" stroke="none"/><path d="M37 82 C39 99 81 99 83 82 C74 88 46 88 37 82 Z" fill="#fff"/><path d="M60 76 C55 85 38 85 30 75" fill="#fff" stroke-width="2.8"/><path d="M60 76 C65 85 82 85 90 75" fill="#fff" stroke-width="2.8"/><path d="M42 88 L45.5 74 L49.5 86 Z" fill="#fff" stroke-width="2.2"/><path d="M70.5 86 L74.5 74 L78 88 Z" fill="#fff" stroke-width="2.2"/><path d="M47 62 C47 55 73 55 73 62 C73 68 66 71 60 71 C54 71 47 68 47 62 Z" fill="#00356b"/></g></svg><svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#fff" stroke="#00356b" stroke-width="3"/><g stroke="#00356b" stroke-width="2.4" stroke-linejoin="round"><rect x="16" y="36" width="15" height="13" fill="#e8eef6"/><rect x="33" y="36" width="15" height="13" fill="#e8eef6"/><rect x="24" y="23" width="16" height="13" fill="#fff"/><path d="M24 13 l5 -3 h6 l5 3 l-3 4 l-2 -1 v7 h-6 v-7 l-2 1 Z" fill="#00356b"/></g></svg><svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#fff" stroke="#00356b" stroke-width="3"/><g stroke="#00356b" stroke-width="2.4" stroke-linejoin="round"><rect x="14" y="16" width="24" height="32" rx="3" fill="#e8eef6"/><path d="M19 24 h14 M19 30 h14 M19 36 h9" stroke-linecap="round"/><circle cx="41" cy="40" r="10" fill="#00356b"/><text x="41" y="45" text-anchor="middle" font-size="14" font-weight="700" fill="#fff" stroke="none" font-family="Georgia,serif">$</text></g></svg><svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#fff" stroke="#00356b" stroke-width="3"/><g stroke="#00356b" stroke-width="2.4" stroke-linejoin="round"><path d="M14 20 Q14 15 19 15 H45 Q50 15 50 20 V36 Q50 41 45 41 H28 L20 49 V41 H19 Q14 41 14 36 Z" fill="#e8eef6"/><circle cx="25" cy="26" r="2" fill="#00356b" stroke="none"/><circle cx="39" cy="26" r="2" fill="#00356b" stroke="none"/><path d="M24 32 Q32 38 40 32" fill="none" stroke-linecap="round"/></g></svg></span><span class="gi">Tool calls: <b>15</b></span><span class="gi">Cash impact: <b class="neg">-$1,104.00</b></span></div><div class="gl"><span class="gk">Before the run</span><span class="gi">Size M on hand: <b>8 of 20 (short 12)</b></span><span class="gi">Cost / list: <b>$22 / $58</b></span><span class="gi">Restock 12: <b>$264, blocked by invoice 501</b></span><span class="gi">Discount policy: <b>none, a human decides</b></span></div></div>
+</div><!--DASH-103-END-->
+</section>
+
+<!-- ========================= CASH ========================= -->
+<section role="tabpanel" id="cash" aria-labelledby="tab-cash">
+  <!--CASH-START--><div class="cash-wrap">
+<div class="tiles">
+  <div class="tile"><div class="k">Start (after reset)</div><div class="v">$3,400.00</div><div class="s">desk.date_today 2026-08-31</div></div>
+  <div class="tile"><div class="k">Paid out</div><div class="v out">−$1,104.00</div><div class="s">2 payments, all signed by a human</div></div>
+  <div class="tile check"><div class="k">Ending checking</div><div class="v">$2,296.00</div><div class="s">✓ matches cash_accounts</div></div>
+  <div class="tile"><div class="k">Waiting for a signature</div><div class="v">$2,400.00</div><div class="s">#102 rent payment · not in the balance</div></div>
+</div>
+
+<div class="sec-title">Every dollar that moved</div>
+<table class="ledger"><thead><tr><th>Date</th><th>Ticket</th><th>What</th><th>Signed by</th><th style="text-align:right">Amount</th><th style="text-align:right">Balance</th></tr></thead>
+<tbody><tr class="start"><td>Start</td><td>—</td><td>Checking after the reset</td><td></td><td class="num"></td><td class="num">$3,400.00</td></tr><tr><td>2026-08-31</td><td>#103</td><td>Invoice 501 → Bulldog Print Co</td><td>Francisco Udave</td><td class="num minus">−$840.00</td><td class="num">$2,560.00</td></tr><tr><td>2026-08-31</td><td>#103</td><td>Restock PO → Bulldog Print Co</td><td>Francisco Udave</td><td class="num minus">−$264.00</td><td class="num">$2,296.00</td></tr><tr class="end"><td>End</td><td>—</td><td>Checking now (cash_accounts)</td><td></td><td class="num minus">−$1,104.00</td><td class="num">$2,296.00</td></tr></tbody></table>
+
+<div class="sec-title">Cash by ticket</div>
+<table class="ledger per"><thead><tr><th>Ticket</th><th>Team's call</th><th style="text-align:right">When resolved</th><th>After human signatures</th><th style="text-align:right">Net</th></tr></thead>
+<tbody><tr><td><b>#101</b> Bulldog tee</td><td><span class="chip warn">On hold</span></td><td class="num">$0.00</td><td><span class="cx cov">invoice payment already paid via another ticket</span></td><td class="num "><b>$0.00</b></td></tr><tr><td><b>#102</b> Rent due</td><td><span class="chip warn">Approved with conditions</span></td><td class="num">$0.00</td><td><span class="cx wait">$2,400.00 rent payment unsigned · won't fit (short $104.00)</span></td><td class="num "><b>$0.00</b></td></tr><tr><td><b>#103</b> Bulk hoodie discount</td><td><span class="chip warn">Needs a human call</span></td><td class="num">$0.00</td><td><span class="cx paid">−$840.00 invoice payment</span> <span class="cx paid">−$264.00 purchase order</span></td><td class="num minus"><b>-$1,104.00</b></td></tr></tbody></table>
+<p class="said">Agents only prepare payments, so resolving a ticket never moves cash. Money leaves checking only when a human signs, and never below $0.</p>
+</div><!--CASH-END-->
+</section>
+
+<!-- ========================= REFLECTIONS ========================= -->
+<section role="tabpanel" id="reflections" aria-labelledby="tab-refl">
+  <!--REFLECT-START--><style>
+  .rf { display: grid; gap: 22px; }
+  .rf h2.rf-title { margin: 0; font-family: Georgia, serif; color: var(--navy); font-size: 26px; }
+  .rf .rf-lead { margin: 4px 0 0; color: var(--muted); font-size: 15px; }
+  .rf-hero { display: grid; grid-template-columns: 1.4fr 1fr; gap: 18px; align-items: center; padding: 22px 24px; border-radius: 16px;
+    background: linear-gradient(120deg, #0b2a5b, #1d4ed8); color: #fff; }
+  .rf-hero h3 { margin: 0 0 6px; font-family: Georgia, serif; font-size: 22px; }
+  .rf-hero p { margin: 0; color: #dbe6ff; line-height: 1.55; }
+  .rf-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .rf-stat { background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.25); border-radius: 12px; padding: 10px 12px; text-align: center; }
+  .rf-stat b { display: block; font-size: 24px; font-family: Georgia, serif; }
+  .rf-stat span { font-size: 12px; color: #dbe6ff; }
+  .rf-sec { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; }
+  .rf-sec > h3 { margin: 0 0 4px; font-family: Georgia, serif; color: var(--navy); font-size: 20px; }
+  .rf-sec > .q { margin: 0 0 14px; color: var(--muted); font-size: 14px; font-style: italic; }
+  .rf-grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .rf-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 1000px) { .rf-grid3, .rf-grid2, .rf-hero { grid-template-columns: 1fr; } }
+  .rf-card { border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; background: var(--blue-50); display: grid; gap: 8px; align-content: start; }
+  .rf-card h4 { margin: 0; font-size: 16px; color: var(--navy); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .rf-grade { margin-left: auto; font-size: 12px; font-weight: 800; padding: 3px 10px; border-radius: 999px; background: var(--green-bg); color: var(--green); }
+  .rf-grade.mid { background: var(--amber-bg); color: var(--amber); }
+  .rf-crew { display: flex; gap: 4px; }
+  .rf-ic .ic { width: 26px; height: 26px; }
+  .rf-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 14px; line-height: 1.45; }
+  .rf-list li { padding-left: 24px; position: relative; }
+  .rf-list li::before { position: absolute; left: 0; top: 0; font-weight: 800; }
+  .rf-list .good::before { content: '✓'; color: var(--green); }
+  .rf-list .watch::before { content: '!'; color: var(--amber); left: 5px; }
+  .rf-list .same::before { content: '='; color: var(--navy); }
+  .rf-list .plus::before { content: '+'; color: var(--blue); }
+  .rf-verdict { font-size: 13px; font-weight: 700; color: var(--navy); background: #fff; border-radius: 8px; padding: 6px 10px; border: 1px dashed var(--line); }
+  table.rf-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .rf-table th { text-align: left; background: var(--navy); color: #fff; padding: 9px 12px; font-weight: 600; font-size: 13px; }
+  .rf-table td { padding: 10px 12px; border-top: 1px solid var(--line); vertical-align: top; line-height: 1.45; }
+  .rf-table td:first-child { font-weight: 700; color: var(--navy); white-space: nowrap; }
+  .rf-match { font-size: 12px; font-weight: 800; padding: 2px 9px; border-radius: 999px; background: var(--green-bg); color: var(--green); white-space: nowrap; }
+  .rf-side h4 { margin: 0 0 6px; color: var(--navy); }
+  .rf-side.one { border-top: 4px solid var(--blue); }
+  .rf-side.team { border-top: 4px solid var(--navy); }
+  .rf-take { margin: 12px 0 0; padding: 10px 14px; border-radius: 10px; background: var(--amber-bg); color: #78350f; font-weight: 600; font-size: 14px; }
+  .rf-num { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--navy); color: #fff; font-weight: 800; font-size: 14px; flex: none; }
+  .rf-num.no { background: var(--red); }
+  .rf-need { font-size: 13px; color: var(--muted); }
+  .rf-need b { color: var(--ink); }
+  .rf-new { display: inline-block; font-size: 12px; font-weight: 700; padding: 2px 9px; border-radius: 999px; background: var(--red-bg); color: var(--red); margin: 2px 4px 2px 0; }
+</style>
+<div class="rf">
+  <div>
+    <h2 class="rf-title">Reflections</h2>
+    <p class="rf-lead">Looking back at how the Campus Customs agent team handled the board, measured against my Expected plan and the real Problem 9 runs.</p>
+  </div>
+
+  <div class="rf-hero">
+    <div>
+      <h3>Verdict: a disciplined team that knew its limits</h3>
+      <p>Coach Dan only brought in the agents each ticket actually needed. Nobody invented stock or prices, nobody paid a cent without my signature, and the discount call came back to me instead of being made up. The one thing I'd fix is how Sunny talks about pending discounts.</p>
+    </div>
+    <div class="rf-stats">
+      <div class="rf-stat"><b>18/18</b><span>expectations met</span></div>
+      <div class="rf-stat"><b>0</b><span>agents who weren't needed</span></div>
+      <div class="rf-stat"><b>$0</b><span>paid without a human</span></div>
+    </div>
+  </div>
+
+  <section class="rf-sec">
+    <h3>1 · How the agents performed on each ticket</h3>
+    <p class="q">How would you evaluate the performance of the agents on each ticket and why?</p>
+    <div class="rf-grid3">
+      <div class="rf-card">
+        <h4>#101 Bulldog tee <span class="rf-crew"><span class="rf-ic" title="boss"><svg class="ic" viewBox="0 0 120 120" aria-hidden="true"><g stroke="#00356b" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"><path d="M26 36 C12 26 3 42 9 56 C15 52 22 46 31 41 Z" fill="#00356b"/><path d="M94 36 C108 26 117 42 111 56 C105 52 98 46 89 41 Z" fill="#00356b"/><path d="M60 20 C84 20 100 30 102 50 C104 62 108 78 100 92 C94 102 78 108 60 108 C42 108 26 102 20 92 C12 78 16 62 18 50 C20 30 36 20 60 20 Z" fill="#fff"/><path d="M70 38 C80 34 91 40 91 50 C91 58 83 60 77 58 C71 56 66 48 70 38 Z" fill="#00356b" stroke="none"/><circle cx="43" cy="50" r="5.5" fill="#00356b" stroke="none"/><circle cx="79" cy="49" r="3.5" fill="#00356b" stroke="none"/><path d="M37 82 C39 99 81 99 83 82 C74 88 46 88 37 82 Z" fill="#fff"/><path d="M60 76 C55 85 38 85 30 75" fill="#fff" stroke-width="2.8"/><path d="M60 76 C65 85 82 85 90 75" fill="#fff" stroke-width="2.8"/><path d="M42 88 L45.5 74 L49.5 86 Z" fill="#fff" stroke-width="2.2"/><path d="M70.5 86 L74.5 74 L78 88 Z" fill="#fff" stroke-width="2.2"/><path d="M47 62 C47 55 73 55 73 62 C73 68 66 71 60 71 C54 71 47 68 47 62 Z" fill="#00356b"/></g></svg></span><span class="rf-ic" title="inventory"><svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#fff" stroke="#00356b" stroke-width="3"/><g stroke="#00356b" stroke-width="2.4" stroke-linejoin="round"><rect x="16" y="36" width="15" height="13" fill="#e8eef6"/><rect x="33" y="36" width="15" height="13" fill="#e8eef6"/><rect x="24" y="23" width="16" height="13" fill="#fff"/><path d="M24 13 l5 -3 h6 l5 3 l-3 4 l-2 -1 v7 h-6 v-7 l-2 1 Z" fill="#00356b"/></g></svg></span><span class="rf-ic" title="accounting"><svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#fff" stroke="#00356b" stroke-width="3"/><g stroke="#00356b" stroke-width="2.4" stroke-linejoin="round"><rect x="14" y="16" width="24" height="32" rx="3" fill="#e8eef6"/><path d="M19 24 h14 M19 30 h14 M19 36 h9" stroke-linecap="round"/><circle cx="41" cy="40" r="10" fill="#00356b"/><text x="41" y="45" text-anchor="middle" font-size="14" font-weight="700" fill="#fff" stroke="none" font-family="Georgia,serif">$</text></g></svg></span><span class="rf-ic" title="customer_service"><svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#fff" stroke="#00356b" stroke-width="3"/><g stroke="#00356b" stroke-width="2.4" stroke-linejoin="round"><path d="M14 20 Q14 15 19 15 H45 Q50 15 50 20 V36 Q50 41 45 41 H28 L20 49 V41 H19 Q14 41 14 36 Z" fill="#e8eef6"/><circle cx="25" cy="26" r="2" fill="#00356b" stroke="none"/><circle cx="39" cy="26" r="2" fill="#00356b" stroke="none"/><path d="M24 32 Q32 38 40 32" fill="none" stroke-linecap="round"/></g></svg></span></span><span class="rf-grade">Strong</span></h4>
+        <ul class="rf-list">
+          <li class="good"><b>Stacks</b> confirmed size S was out of stock (0 on hand) without guessing.</li>
+          <li class="good"><b>Penny</b> caught that invoice 501 ($840) was unpaid and 3 days overdue, the real reason Bulldog Print Co wouldn't reprint.</li>
+          <li class="good"><b>Coach Dan</b> put the order on hold instead of pretending it could ship.</li>
+          <li class="good">Nobody paid the invoice on their own; it waited for my signature.</li>
+          <li class="good"><b>Sunny</b> told Tauhid the truth: size S is out, the restock isn't confirmed, so no delivery date, and asked if another size would work.</li>
+        </ul>
+        <div class="rf-verdict">Right call, right reasons, no made-up facts.</div>
+      </div>
+      <div class="rf-card">
+        <h4>#102 Rent due <span class="rf-crew"><span class="rf-ic" title="boss"><svg class="ic" viewBox="0 0 120 120" aria-hidden="true"><g stroke="#00356b" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"><path d="M26 36 C12 26 3 42 9 56 C15 52 22 46 31 41 Z" fill="#00356b"/><path d="M94 36 C108 26 117 42 111 56 C105 52 98 46 89 41 Z" fill="#00356b"/><path d="M60 20 C84 20 100 30 102 50 C104 62 108 78 100 92 C94 102 78 108 60 108 C42 108 26 102 20 92 C12 78 16 62 18 50 C20 30 36 20 60 20 Z" fill="#fff"/><path d="M70 38 C80 34 91 40 91 50 C91 58 83 60 77 58 C71 56 66 48 70 38 Z" fill="#00356b" stroke="none"/><circle cx="43" cy="50" r="5.5" fill="#00356b" stroke="none"/><circle cx="79" cy="49" r="3.5" fill="#00356b" stroke="none"/><path d="M37 82 C39 99 81 99 83 82 C74 88 46 88 37 82 Z" fill="#fff"/><path d="M60 76 C55 85 38 85 30 75" fill="#fff" stroke-width="2.8"/><path d="M60 76 C65 85 82 85 90 75" fill="#fff" stroke-width="2.8"/><path d="M42 88 L45.5 74 L49.5 86 Z" fill="#fff" stroke-width="2.2"/><path d="M70.5 86 L74.5 74 L78 88 Z" fill="#fff" stroke-width="2.2"/><path d="M47 62 C47 55 73 55 73 62 C73 68 66 71 60 71 C54 71 47 68 47 62 Z" fill="#00356b"/></g></svg></span><span class="rf-ic" title="facilities"><svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#fff" stroke="#00356b" stroke-width="3"/><g stroke="#00356b" stroke-width="2.4" stroke-linejoin="round"><path d="M14 28 L32 15 L50 28" fill="none" stroke-linecap="round"/><rect x="18" y="27" width="28" height="21" fill="#e8eef6"/><rect x="28" y="35" width="8" height="13" fill="#00356b"/><circle cx="45" cy="44" r="5" fill="#fff"/></g></svg></span><span class="rf-ic" title="accounting"><svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#fff" stroke="#00356b" stroke-width="3"/><g stroke="#00356b" stroke-width="2.4" stroke-linejoin="round"><rect x="14" y="16" width="24" height="32" rx="3" fill="#e8eef6"/><path d="M19 24 h14 M19 30 h14 M19 36 h9" stroke-linecap="round"/><circle cx="41" cy="40" r="10" fill="#00356b"/><text x="41" y="45" text-anchor="middle" font-size="14" font-weight="700" fill="#fff" stroke="none" font-family="Georgia,serif">$</text></g></svg></span></span><span class="rf-grade">Strong</span></h4>
+        <ul class="rf-list">
+          <li class="good"><b>Keys</b> confirmed the lease against the database: $2,400 for the Chapel Street shop, due 2026-09-02.</li>
+          <li class="good">Used <b>desk.date_today</b> correctly: due in 2 days, <i>not</i> overdue.</li>
+          <li class="good"><b>Penny</b> checked the cash for rent <i>and</i> the overdue invoice together ($3,240 of $3,400 → $160 left), not just the rent alone.</li>
+          <li class="good">The rent was prepared as a payment request for me to sign, not paid.</li>
+        </ul>
+        <div class="rf-verdict">Lean: only the two agents the ticket needed.</div>
+      </div>
+      <div class="rf-card">
+        <h4>#103 Bulk hoodie discount <span class="rf-crew"><span class="rf-ic" title="boss"><svg class="ic" viewBox="0 0 120 120" aria-hidden="true"><g stroke="#00356b" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"><path d="M26 36 C12 26 3 42 9 56 C15 52 22 46 31 41 Z" fill="#00356b"/><path d="M94 36 C108 26 117 42 111 56 C105 52 98 46 89 41 Z" fill="#00356b"/><path d="M60 20 C84 20 100 30 102 50 C104 62 108 78 100 92 C94 102 78 108 60 108 C42 108 26 102 20 92 C12 78 16 62 18 50 C20 30 36 20 60 20 Z" fill="#fff"/><path d="M70 38 C80 34 91 40 91 50 C91 58 83 60 77 58 C71 56 66 48 70 38 Z" fill="#00356b" stroke="none"/><circle cx="43" cy="50" r="5.5" fill="#00356b" stroke="none"/><circle cx="79" cy="49" r="3.5" fill="#00356b" stroke="none"/><path d="M37 82 C39 99 81 99 83 82 C74 88 46 88 37 82 Z" fill="#fff"/><path d="M60 76 C55 85 38 85 30 75" fill="#fff" stroke-width="2.8"/><path d="M60 76 C65 85 82 85 90 75" fill="#fff" stroke-width="2.8"/><path d="M42 88 L45.5 74 L49.5 86 Z" fill="#fff" stroke-width="2.2"/><path d="M70.5 86 L74.5 74 L78 88 Z" fill="#fff" stroke-width="2.2"/><path d="M47 62 C47 55 73 55 73 62 C73 68 66 71 60 71 C54 71 47 68 47 62 Z" fill="#00356b"/></g></svg></span><span class="rf-ic" title="inventory"><svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#fff" stroke="#00356b" stroke-width="3"/><g stroke="#00356b" stroke-width="2.4" stroke-linejoin="round"><rect x="16" y="36" width="15" height="13" fill="#e8eef6"/><rect x="33" y="36" width="15" height="13" fill="#e8eef6"/><rect x="24" y="23" width="16" height="13" fill="#fff"/><path d="M24 13 l5 -3 h6 l5 3 l-3 4 l-2 -1 v7 h-6 v-7 l-2 1 Z" fill="#00356b"/></g></svg></span><span class="rf-ic" title="accounting"><svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#fff" stroke="#00356b" stroke-width="3"/><g stroke="#00356b" stroke-width="2.4" stroke-linejoin="round"><rect x="14" y="16" width="24" height="32" rx="3" fill="#e8eef6"/><path d="M19 24 h14 M19 30 h14 M19 36 h9" stroke-linecap="round"/><circle cx="41" cy="40" r="10" fill="#00356b"/><text x="41" y="45" text-anchor="middle" font-size="14" font-weight="700" fill="#fff" stroke="none" font-family="Georgia,serif">$</text></g></svg></span><span class="rf-ic" title="customer_service"><svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#fff" stroke="#00356b" stroke-width="3"/><g stroke="#00356b" stroke-width="2.4" stroke-linejoin="round"><path d="M14 20 Q14 15 19 15 H45 Q50 15 50 20 V36 Q50 41 45 41 H28 L20 49 V41 H19 Q14 41 14 36 Z" fill="#e8eef6"/><circle cx="25" cy="26" r="2" fill="#00356b" stroke="none"/><circle cx="39" cy="26" r="2" fill="#00356b" stroke="none"/><path d="M24 32 Q32 38 40 32" fill="none" stroke-linecap="round"/></g></svg></span></span><span class="rf-grade mid">Strong, one miss</span></h4>
+        <ul class="rf-list">
+          <li class="good"><b>Stacks</b> found the shortfall: 8 size M on hand for 20 requested (short 12), plus a 5-day reprint that's blocked by invoice 501.</li>
+          <li class="good"><b>Penny</b> priced real options (5%, 10%, 15% off) from cost and list price.</li>
+          <li class="good"><b>Coach Dan</b> didn't pick a random discount and sent the decision to me.</li>
+          <li class="watch"><b>Sunny's</b> draft listed every discounted price while saying they're "pending review". A student club could read that as an offer. Better: "we're reviewing a group price and will confirm it."</li>
+        </ul>
+        <div class="rf-verdict">Great judgment; the customer message needs tighter wording.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="rf-sec">
+    <h3>2 · Actual vs. my Expected plan</h3>
+    <p class="q">For each ticket, how did Actual compare to the Expected plan you wrote earlier?</p>
+    <table class="rf-table">
+      <thead><tr><th>Ticket</th><th>What matched</th><th>What was different</th><th>Score</th></tr></thead>
+      <tbody>
+        <tr><td>#101</td>
+          <td>Coach Dan called Inventory, and Accounting checked invoice 501, just as planned. They used <span class="tool">get_ticket_details</span> <span class="tool">check_item_availability</span> <span class="tool">check_invoice_payment</span> and realized the order couldn't be completed. Facilities stayed out.</td>
+          <td><b>Customer Service</b> joined, which I hadn't planned. It was a good add, since Tauhid needed a reply. They also checked the vendor and the cash, which helped explain <i>why</i> the order was stuck.</td>
+          <td><span class="rf-match">7 / 7</span></td></tr>
+        <tr><td>#102</td>
+          <td>Facilities went first, then Accounting, in the order I planned. They used <span class="tool">get_lease_details</span> <span class="tool">get_cash_balance</span>, and the payment waited for human approval.</td>
+          <td>Penny added <span class="tool">check_cash_for_payment</span> <span class="tool">check_invoice_payment</span> to make sure the rent and the overdue invoice fit together. That was extra work, but useful.</td>
+          <td><span class="rf-match">5 / 5</span></td></tr>
+        <tr><td>#103</td>
+          <td>The order was Inventory → vendor check → Accounting → Customer Service, as planned. They used <span class="tool">check_item_availability</span> <span class="tool">get_vendor_info</span> <span class="tool">get_pricing</span>, and the discount went to a human.</td>
+          <td>Penny ran <span class="tool">get_pricing</span> six times to build the options. That was thorough but a bit chatty. The only real gap was Sunny's wording about pending prices.</td>
+          <td><span class="rf-match">6 / 6</span></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="rf-sec">
+    <h3>3 · When one agent with tools would have been simpler</h3>
+    <p class="q">What would have been simpler as one agent with tools and why?</p>
+    <div class="rf-grid2">
+      <div class="rf-card rf-side one">
+        <h4>One agent is enough when…</h4>
+        <ul class="rf-list">
+          <li class="plus">It's a <b>straight lookup</b>, like #102: read the lease, check the balance, prepare one payment. One agent with <span class="tool">get_lease_details</span> <span class="tool">get_cash_balance</span> could do it in a single loop.</li>
+          <li class="plus">That means <b>fewer model calls and handoffs</b>, so it's cheaper, faster, and there's less to audit.</li>
+          <li class="plus">Questions like "what's the price of the cap?" or "how much is in checking?" don't need a meeting.</li>
+        </ul>
+      </div>
+      <div class="rf-card rf-side team">
+        <h4>A team earns its cost when…</h4>
+        <ul class="rf-list">
+          <li class="plus">The ticket <b>crosses departments</b> (stock + vendor + cash + customer), like #101 and #103.</li>
+          <li class="plus">Roles have <b>different authority</b>: Accounting prepares money, Customer Service talks to customers, and only a human signs. Separate agents keep those lines clean.</li>
+          <li class="plus">Each specialist sees <b>only its own tools</b>, so mistakes stay contained and every step is easy to trace in the audit trail.</li>
+        </ul>
+      </div>
+    </div>
+    <p class="rf-take">My take: route simple lookups to one agent, and save the full team for tickets that need several departments to agree.</p>
+  </section>
+
+  <section class="rf-sec">
+    <h3>4 · Three new problems this team can already solve</h3>
+    <p class="q">With the tools we built, no new code needed.</p>
+    <div class="rf-grid3">
+      <div class="rf-card">
+        <h4><span class="rf-num">1</span> "Do we have overdue invoices?" <span class="rf-crew"><span class="rf-ic" title="accounting"><svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#fff" stroke="#00356b" stroke-width="3"/><g stroke="#00356b" stroke-width="2.4" stroke-linejoin="round"><rect x="14" y="16" width="24" height="32" rx="3" fill="#e8eef6"/><path d="M19 24 h14 M19 30 h14 M19 36 h9" stroke-linecap="round"/><circle cx="41" cy="40" r="10" fill="#00356b"/><text x="41" y="45" text-anchor="middle" font-size="14" font-weight="700" fill="#fff" stroke="none" font-family="Georgia,serif">$</text></g></svg></span></span></h4>
+        <p>A manager asks for every bill that's past due. Penny pulls the full ledger and flags anything due before <b>desk.date_today</b>, plus which vendors are blocked because of it.</p>
+        <div><span class="tool">check_invoice_payment</span> <span class="tool">get_vendor_info</span></div>
+      </div>
+      <div class="rf-card">
+        <h4><span class="rf-num">2</span> "Can we cover what's due soon?" <span class="rf-crew"><span class="rf-ic" title="accounting"><svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#fff" stroke="#00356b" stroke-width="3"/><g stroke="#00356b" stroke-width="2.4" stroke-linejoin="round"><rect x="14" y="16" width="24" height="32" rx="3" fill="#e8eef6"/><path d="M19 24 h14 M19 30 h14 M19 36 h9" stroke-linecap="round"/><circle cx="41" cy="40" r="10" fill="#00356b"/><text x="41" y="45" text-anchor="middle" font-size="14" font-weight="700" fill="#fff" stroke="none" font-family="Georgia,serif">$</text></g></svg></span><span class="rf-ic" title="facilities"><svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#fff" stroke="#00356b" stroke-width="3"/><g stroke="#00356b" stroke-width="2.4" stroke-linejoin="round"><path d="M14 28 L32 15 L50 28" fill="none" stroke-linecap="round"/><rect x="18" y="27" width="28" height="21" fill="#e8eef6"/><rect x="28" y="35" width="8" height="13" fill="#00356b"/><circle cx="45" cy="44" r="5" fill="#fff"/></g></svg></span></span></h4>
+        <p>A manager wants to know if cash covers the next few weeks. Penny lists every bill and rent payment due within 30 days and the balance left after them, and tests any planned payment so the account never goes negative.</p>
+        <div><span class="tool">get_cash_balance</span> <span class="tool">check_cash_for_payment</span> <span class="tool">get_lease_details</span></div>
+      </div>
+      <div class="rf-card">
+        <h4><span class="rf-num">3</span> "How much is it, and is it in my size?" <span class="rf-crew"><span class="rf-ic" title="customer_service"><svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#fff" stroke="#00356b" stroke-width="3"/><g stroke="#00356b" stroke-width="2.4" stroke-linejoin="round"><path d="M14 20 Q14 15 19 15 H45 Q50 15 50 20 V36 Q50 41 45 41 H28 L20 49 V41 H19 Q14 41 14 36 Z" fill="#e8eef6"/><circle cx="25" cy="26" r="2" fill="#00356b" stroke="none"/><circle cx="39" cy="26" r="2" fill="#00356b" stroke="none"/><path d="M24 32 Q32 38 40 32" fill="none" stroke-linecap="round"/></g></svg></span><span class="rf-ic" title="inventory"><svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#fff" stroke="#00356b" stroke-width="3"/><g stroke="#00356b" stroke-width="2.4" stroke-linejoin="round"><rect x="16" y="36" width="15" height="13" fill="#e8eef6"/><rect x="33" y="36" width="15" height="13" fill="#e8eef6"/><rect x="24" y="23" width="16" height="13" fill="#fff"/><path d="M24 13 l5 -3 h6 l5 3 l-3 4 l-2 -1 v7 h-6 v-7 l-2 1 Z" fill="#00356b"/></g></svg></span></span></h4>
+        <p>A customer asks the current price of an item. Stacks gives the real list price and stock by size, and Sunny answers without inventing a discount.</p>
+        <div><span class="tool">get_pricing</span> <span class="tool">check_item_availability</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="rf-sec">
+    <h3>5 · Three problems it can't solve yet, and what it would need</h3>
+    <p class="q">These need data the database doesn't have, so they need new tools and agents.</p>
+    <div class="rf-grid3">
+      <div class="rf-card">
+        <h4><span class="rf-num no">1</span> Forecasting demand to restock</h4>
+        <p>Knowing <i>how many</i> hoodies to reorder before move-in week. We only have today's stock, with no sales history.</p>
+        <p class="rf-need"><b>Data:</b> an orders / order_items table with dates.<br>
+        <b>Tools:</b> <span class="rf-new">get_sales_history(sku, period)</span><span class="rf-new">forecast_demand(sku, weeks)</span><span class="rf-new">suggest_reorder(sku)</span><br>
+        <b>Agent:</b> a <b>Planning</b> agent that turns forecasts into PO drafts for Accounting to cost and a human to sign.</p>
+      </div>
+      <div class="rf-card">
+        <h4><span class="rf-num no">2</span> "Where's my order?"</h4>
+        <p>Checking delivery status for a customer. We know the vendors (even QuickShip CT, the courier), but not their shipments.</p>
+        <p class="rf-need"><b>Data:</b> a shipments table or the courier's tracking API.<br>
+        <b>Tools:</b> <span class="rf-new">get_order_status(order_id)</span><span class="rf-new">track_shipment(tracking_no)</span><br>
+        <b>Agent:</b> a <b>Logistics</b> agent that Sunny can ask, so customers get real ETAs instead of guesses.</p>
+      </div>
+      <div class="rf-card">
+        <h4><span class="rf-num no">3</span> What's actually popular?</h4>
+        <p>Ranking products by past purchases to decide what to feature, discount, or drop. No purchase data exists today.</p>
+        <p class="rf-need"><b>Data:</b> purchase history by product, size, and date.<br>
+        <b>Tools:</b> <span class="rf-new">top_products(period, category)</span><span class="rf-new">sell_through_rate(sku)</span><br>
+        <b>Agent:</b> a <b>Merchandising</b> analyst agent that reports to Coach Dan and works with Penny on margins before any price change.</p>
+      </div>
+    </div>
+  </section>
+</div>
+<!--REFLECT-END-->
+</section>
+
+</main>
+
+<footer>Campus Customs agent team · HW5 · data: data/campus_customs_new.db · desk.date_today 2026-08-31</footer>
+
+<script>
+  (function () {
+    var tabs = Array.prototype.slice.call(document.querySelectorAll('[role="tab"]'));
+    function show(tab) {
+      tabs.forEach(function (t) {
+        var on = t === tab;
+        t.setAttribute('aria-selected', on ? 'true' : 'false');
+        t.tabIndex = on ? 0 : -1;
+        document.getElementById(t.getAttribute('aria-controls')).classList.toggle('active', on);
+      });
+      history.replaceState(null, '', '#' + tab.getAttribute('aria-controls'));
+    }
+    tabs.forEach(function (t, i) {
+      t.addEventListener('click', function () { show(t); });
+      t.addEventListener('keydown', function (e) {
+        if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+          var next = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
+          show(next); next.focus();
+        }
+      });
+    });
+    var start = tabs.filter(function (t) { return '#' + t.getAttribute('aria-controls') === location.hash; })[0];
+    show(start || tabs[0]);
+  })();
+</script>
+</body>
+</html>

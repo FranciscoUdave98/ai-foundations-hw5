@@ -1,0 +1,158 @@
+{
+  "description": "Smoke test of the campus-customs MCP server, called live by the vibe coder (Claude Code) through the .mcp.json connection.",
+  "date_run": "2026-10-06",
+  "mcp_config": ".mcp.json -> mcpServers.campus-customs (stdio: HW5/.venv/Scripts/python.exe HW5/mcp_server/server.py)",
+  "database": "data/campus_customs_new.db",
+  "database_sha256": "23686a90d698f7fa6f901a3f0a9774db9cbb31e13151c9e5717275f3321f360a",
+  "tests": [
+    {
+      "test": 1,
+      "prompt": "Give me the details for ticket 101",
+      "tool": "get_ticket_details",
+      "server": "campus-customs",
+      "arguments": {
+        "ticket_id": 101
+      },
+      "output": {
+        "date_today": "2026-08-31",
+        "ticket": {
+          "id": 101,
+          "type": "customer_order",
+          "requester": "Tauhid Zaman",
+          "subject": "Bulldog tee",
+          "sku": "CC-TEE-WHITE",
+          "size": "S",
+          "qty": 1,
+          "lease_id": null,
+          "invoice_id": 501,
+          "status": "open",
+          "notes": "Needs a tee in size S.",
+          "created_at": "2026-08-31T09:15:00-04:00"
+        },
+        "linked": {
+          "product": {
+            "sku": "CC-TEE-WHITE",
+            "name": "Classic Bulldog Tee",
+            "size_requested": "S",
+            "qty_requested": 1
+          },
+          "invoice": {
+            "invoice_id": 501,
+            "vendor_id": 1,
+            "vendor_name": "Bulldog Print Co",
+            "amount": 840,
+            "due_date": "2026-08-28",
+            "status": "open",
+            "description": "Rush reprint CC-TEE-WHITE S"
+          }
+        }
+      },
+      "answer": "Ticket 101 is an open customer order from Tauhid Zaman for 1 Classic Bulldog Tee (CC-TEE-WHITE) in size S. It links to invoice 501: Bulldog Print Co, $840, due 2026-08-28, status open.",
+      "db_check": {
+        "all_match": true,
+        "checks": {
+          "ticket row identical to tickets.id=101": true,
+          "date_today = desk.date_today": true,
+          "linked invoice 501 amount/due/status/vendor match invoices+vendors": true
+        }
+      }
+    },
+    {
+      "test": 2,
+      "prompt": "Get me the availability and location for all sizes for a Classic Bulldog Tee",
+      "tool": "check_item_availability",
+      "server": "campus-customs",
+      "arguments": {
+        "sku": "CC-TEE-WHITE"
+      },
+      "output": {
+        "sku": "CC-TEE-WHITE",
+        "name": "Classic Bulldog Tee",
+        "unit_cost": 8,
+        "list_price": 28,
+        "margin_per_unit": 20,
+        "margin_pct": 71.4,
+        "total_qty_all_sizes": 10,
+        "sizes": [
+          {
+            "size": "S",
+            "qty": 0,
+            "location": "Aisle B",
+            "in_stock": false
+          },
+          {
+            "size": "M",
+            "qty": 5,
+            "location": "Aisle B",
+            "in_stock": true
+          },
+          {
+            "size": "L",
+            "qty": 3,
+            "location": "Aisle B",
+            "in_stock": true
+          },
+          {
+            "size": "XL",
+            "qty": 2,
+            "location": "Aisle B",
+            "in_stock": true
+          }
+        ]
+      },
+      "answer": "Classic Bulldog Tee, all in Aisle B: S 0 (sold out), M 5, L 3, XL 2, total 10. Cost $8, list price $28.",
+      "db_check": {
+        "all_match": true,
+        "checks": {
+          "every size's qty and location match inventory": true,
+          "unit_cost and list_price match pricing": true,
+          "total_qty_all_sizes = SUM(inventory.qty)": true
+        }
+      }
+    },
+    {
+      "test": 3,
+      "prompt": "Give me all the payments we've made to date",
+      "tool": "check_invoice_payment",
+      "server": "campus-customs",
+      "arguments": {},
+      "output": {
+        "date_today": "2026-08-31",
+        "payments_to_date": [],
+        "payment_count": 0,
+        "total_paid": 0,
+        "invoices": [
+          {
+            "invoice_id": 501,
+            "vendor_id": 1,
+            "vendor_name": "Bulldog Print Co",
+            "vendor_specialty": "apparel reprint",
+            "vendor_lead_days": 5,
+            "description": "Rush reprint CC-TEE-WHITE S",
+            "amount": 840,
+            "due_date": "2026-08-28",
+            "status": "open",
+            "amount_paid": 0,
+            "outstanding_amount": 840,
+            "is_paid": false,
+            "is_overdue": true,
+            "days_overdue": 3,
+            "payments": []
+          }
+        ],
+        "total_outstanding": 840
+      },
+      "answer": "No payments have been made to date (payments table is empty, $0 paid). Invoice 501 to Bulldog Print Co ($840) is still unpaid and 3 days overdue as of 2026-08-31.",
+      "db_check": {
+        "all_match": true,
+        "checks": {
+          "payments_to_date matches payments table (0 rows)": true,
+          "total_paid = SUM(payments.amount)": true,
+          "invoice list covers every invoice row": true,
+          "invoice 501 amount/due/status match invoices": true
+        }
+      }
+    }
+  ],
+  "all_tests_match_db": true
+}
