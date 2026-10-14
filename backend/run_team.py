@@ -17,6 +17,7 @@ import sys
 
 os.environ.setdefault("PYDANTIC_AI_NO_BANNER", "1")
 
+import board  # noqa: E402
 from agents import ROSTER  # noqa: E402
 from reset_db import reset_working_db  # noqa: E402
 from team import Team  # noqa: E402
@@ -43,15 +44,21 @@ async def main() -> int:
             return 0
 
         if args.all:
-            board = await team._call("list_tickets", {"status": "open"})
-            ticket_ids = [t["id"] for t in board["tickets"]]
+            board_now = await team._call("list_tickets", {"status": "open"})
+            ticket_ids = [t["id"] for t in board_now["tickets"]]
         else:
             ticket_ids = [args.ticket]
 
         for ticket_id in ticket_ids:
             print(f"\n=== Ticket {ticket_id} ===", flush=True)
             result = await team.resolve_ticket(ticket_id)
+            # Same bookkeeping as the board's run route: the ticket is resolved and any
+            # payments or POs wait on the board's "Needs your signature" for a human.
+            queued = board.record_decision(result)
+            await team._call("set_ticket_status", {"ticket_id": ticket_id, "status": "resolved"})
             print(json.dumps(result.model_dump(mode="json"), indent=2), flush=True)
+            print(f"Ticket {ticket_id} resolved: {result.decision.decision}. "
+                  f"{len(queued)} payment(s)/PO(s) waiting for a human signature on the board.", flush=True)
     return 0
 
 
