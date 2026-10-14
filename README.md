@@ -30,7 +30,7 @@ The working copy is committed in its **after-the-run** state (checking $2,296 af
 
 ## Run it
 
-You need Python 3.11+ (built on 3.13), Node 20+, and a Portkey key.
+You need Python 3.11+ (tested on 3.13), Node 20.19+ or 22.12+ (needed by Vite 8), and a Portkey key.
 
 ### 1. Install
 
@@ -57,7 +57,7 @@ Whenever you want a clean run, copy the original over the working copy:
 python backend/reset_db.py
 ```
 
-This does the same as `cp data/campus_customs.db data/campus_customs_new.db` and checks that the hashes match. The original file is only ever read.
+This copies `data/campus_customs.db` over `data/campus_customs_new.db` (same as `cp`), checks that the hashes match, and clears `output/board_state.json`, so no decisions or payment requests from an earlier run carry over. The original file is only ever read.
 
 ### 4. Start the MCP server
 
